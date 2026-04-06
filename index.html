@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 도구 티어 게임 - FGI 아이스브레이킹</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* A4 가로 사이즈 및 인쇄 최적화 */
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        @media print {
+            body {
+                background-color: white;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .a4-container {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 10mm !important;
+                width: 297mm !important;
+                height: 210mm !important;
+                page-break-after: avoid;
+            }
+            .tier-row {
+                min-height: 100px !important;
+            }
+
+            /* --- 맞춤형 인쇄 모드 상태 제어 --- */
+            
+            /* 1. 빈 양식 인쇄 모드: 보관함 숨김, 표 안의 아이템 숨김 */
+            body.print-empty-board #item-pool-container { display: none !important; }
+            body.print-empty-board #tier-board .draggable { display: none !important; }
+
+            /* 2. 결과 인쇄 모드: 보관함만 숨김 (표 안의 아이템은 표시) */
+            body.print-result #item-pool-container { display: none !important; }
+
+            /* 3. 아이콘 인쇄 모드 (오리기용): 헤더와 표 숨김, 보관함만 전체 화면으로 표시 */
+            body.print-icons #main-header { display: none !important; }
+            body.print-icons #tier-board { display: none !important; }
+            body.print-icons .a4-container { height: auto !important; min-height: 0 !important; }
+            body.print-icons #item-pool-container { margin-top: 0 !important; }
+            
+            /* 가위질이 쉽도록 아이콘 주변에 약간의 여백/절취선 느낌 추가 */
+            body.print-icons .draggable { 
+                border: 1px dashed #ccc !important; 
+                margin: 2px !important; 
+            }
+        }
+
+        /* A4 가로 비율 컨테이너 (웹 뷰용) */
+        .a4-container {
+            width: 297mm;
+            min-height: 210mm;
+            background: white;
+            margin: 2rem auto;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 15mm;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 드래그 앤 드롭 관련 스타일 */
+        .draggable {
+            cursor: grab;
+            transition: transform 0.1s;
+        }
+        .draggable:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+        .dropzone {
+            transition: background-color 0.2s;
+        }
+        .dropzone.dragover {
+            background-color: rgba(255, 255, 255, 0.5);
+            outline: 2px dashed #4b5563;
+        }
+
+        .tier-label {
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 컨트롤 패널 (인쇄 시 숨김) -->
+    <div class="fixed top-4 right-4 flex flex-col gap-2 no-print z-50">
+        <button onclick="addCustomAI()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow flex items-center justify-center gap-2 transition w-full">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i> 새로운 AI 추가
+        </button>
+        <div class="flex gap-2">
+            <button onclick="printEmptyBoard()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 px-3 py-2 rounded-lg shadow-sm flex items-center gap-1 transition text-sm font-semibold tooltip" title="빈 표만 출력합니다">
+                <i data-lucide="file" class="w-4 h-4"></i> 빈 양식
+            </button>
+            <button onclick="printResult()" class="bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded-lg shadow-sm flex items-center gap-1 transition text-sm font-semibold tooltip" title="현재 결과만 출력합니다">
+                <i data-lucide="save" class="w-4 h-4"></i> 결과 저장
+            </button>
+            <button onclick="printIcons()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg shadow-sm flex items-center gap-1 transition text-sm font-semibold tooltip" title="오리기용 아이콘만 출력합니다">
+                <i data-lucide="scissors" class="w-4 h-4"></i> 아이콘만
+            </button>
+        </div>
+    </div>
+
+    <!-- A4 캔버스 영역 -->
+    <div class="a4-container rounded-xl relative">
+        
+        <!-- 헤더 영역 -->
+        <header id="main-header" class="flex justify-between items-end border-b-2 border-gray-200 pb-4 mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 tracking-tight">AI 도구 티어 게임</h1>
+                <p class="text-gray-500 mt-1 text-sm">연구를 위한 에이전틱 AI 설계 FGI 사전 활동</p>
+            </div>
+            <div class="flex gap-4 items-center">
+                <div class="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <span>참여자 :</span>
+                    <input type="text" placeholder="이름 입력" class="border-b border-gray-400 focus:outline-none focus:border-indigo-600 px-1 w-24 text-center bg-transparent">
+                </div>
+            </div>
+        </header>
+
+        <!-- 티어 보드 -->
+        <div id="tier-board" class="flex-grow flex flex-col gap-2 border-2 border-gray-800 bg-gray-900 rounded-lg overflow-hidden">
+            
+            <!-- GOD Tier -->
+            <div class="flex w-full tier-row bg-white border-b border-gray-800 min-h-[90px]">
+                <div class="w-32 bg-red-500 text-white flex flex-col justify-center items-center p-2 border-r border-gray-800 flex-shrink-0">
+                    <span class="text-2xl font-black tier-label">GOD</span>
+                    <span class="text-[10px] text-center mt-1 font-medium leading-tight opacity-90">내 뇌의 일부<br>(없으면 연구 올스톱)</span>
+                </div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center" id="tier-god" ondrop="drop(event)" ondragover="allowDrop(event)">
+                    <!-- Items go here -->
+                </div>
+            </div>
+
+            <!-- A Tier -->
+            <div class="flex w-full tier-row bg-white border-b border-gray-800 min-h-[90px]">
+                <div class="w-32 bg-orange-400 text-white flex flex-col justify-center items-center p-2 border-r border-gray-800 flex-shrink-0">
+                    <span class="text-2xl font-black tier-label">A</span>
+                    <span class="text-[10px] text-center mt-1 font-medium leading-tight opacity-90">훌륭한 조교<br>(시간 단축에 큰 도움)</span>
+                </div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center" id="tier-a" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <!-- B Tier -->
+            <div class="flex w-full tier-row bg-white border-b border-gray-800 min-h-[90px]">
+                <div class="w-32 bg-yellow-400 text-gray-900 flex flex-col justify-center items-center p-2 border-r border-gray-800 flex-shrink-0">
+                    <span class="text-2xl font-black">B</span>
+                    <span class="text-[10px] text-center mt-1 font-medium leading-tight">가끔 쓰는 알바생<br>(제한적 사용, 검수 필수)</span>
+                </div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center" id="tier-b" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <!-- F Tier -->
+            <div class="flex w-full tier-row bg-white min-h-[90px]">
+                <div class="w-32 bg-gray-500 text-white flex flex-col justify-center items-center p-2 border-r border-gray-800 flex-shrink-0">
+                    <span class="text-2xl font-black tier-label">F</span>
+                    <span class="text-[10px] text-center mt-1 font-medium leading-tight opacity-90">차라리 내가 하지<br>(할루시네이션, 시간낭비)</span>
+                </div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center" id="tier-f" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+        </div>
+
+        <!-- 아이콘 보관함 (대기열) - 카테고리별 분류 -->
+        <div id="item-pool-container" class="mt-6">
+            <div class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-1">
+                <i data-lucide="layout-grid" class="w-4 h-4"></i> 평가 대기중인 AI 도구 <span class="text-xs font-normal text-gray-400 ml-2">(인쇄하여 가위로 오려 사용하거나 웹에서 드래그하세요)</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 1. 글쓰기/작업 -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="pen-tool" class="w-3 h-3"></i> 글쓰기 및 전반적인 작업</h3>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-writing" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+
+                <!-- 2. 연구/리서치 -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="search" class="w-3 h-3"></i> 연구, 리서치 및 기록</h3>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-research" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+
+                <!-- 3. 이미지/디자인/PPT -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="image" class="w-3 h-3"></i> 이미지, 디자인 및 PPT</h3>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-design" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+
+                <!-- 4. 영상/오디오 -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="video" class="w-3 h-3"></i> 동영상 및 오디오</h3>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-video" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+
+                <!-- 5. 3D 생성 -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="box" class="w-3 h-3"></i> 3D 생성</h3>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-3d" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+
+                <!-- 6. 개발/노코드/자동화 -->
+                <div>
+                    <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="code" class="w-3 h-3"></i> 개발, 노코드 및 자동화</h3>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-code" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Lucide 아이콘 초기화
+        lucide.createIcons();
+
+        // 인쇄 모드 제어 함수
+        function printEmptyBoard() {
+            document.body.classList.add('print-empty-board');
+            window.print();
+            document.body.classList.remove('print-empty-board');
+        }
+
+        function printResult() {
+            document.body.classList.add('print-result');
+            window.print();
+            document.body.classList.remove('print-result');
+        }
+
+        function printIcons() {
+            document.body.classList.add('print-icons');
+            window.print();
+            document.body.classList.remove('print-icons');
+        }
+
+        // 대학원생/연구자들이 자주 쓰는 AI 리스트 (Google Favicon 서비스 연동 + 브랜드 컬러 보정)
+        const aiTools = [
+            // 1. 글쓰기 (writing)
+            { id: 'chatgpt', name: 'ChatGPT', color: 'bg-[#10a37f]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=chatgpt.com', category: 'writing' },
+            { id: 'claude', name: 'Claude', color: 'bg-[#d97757]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=claude.ai', category: 'writing' },
+            { id: 'gemini', name: 'Gemini', color: 'bg-gradient-to-br from-[#4285f4] via-[#9b72cb] to-[#d96570]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=gemini.google.com', category: 'writing' },
+            { id: 'deepseek', name: 'DeepSeek', color: 'bg-[#1d4ed8]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=deepseek.com', category: 'writing' },
+            { id: 'grok', name: 'Grok', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=x.ai', category: 'writing' },
+            { id: 'copilot', name: 'Copilot', color: 'bg-[#1f2328]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=copilot.microsoft.com', category: 'writing' },
+            { id: 'wrtn', name: '뤼튼(Wrtn)', color: 'bg-[#ff3a5e]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=wrtn.ai', category: 'writing' },
+            { id: 'lechat', name: 'Le Chat', color: 'bg-[#f97316]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=mistral.ai', category: 'writing' },
+            { id: 'poe', name: 'Poe', color: 'bg-[#7c3aed]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=poe.com', category: 'writing' },
+
+            // 2. 연구 (research)
+            { id: 'perplexity', name: 'Perplexity', color: 'bg-[#22b8cd]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=perplexity.ai', category: 'research' },
+            { id: 'consensus', name: 'Consensus', color: 'bg-[#2563eb]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=consensus.app', category: 'research' },
+            { id: 'elicit', name: 'Elicit', color: 'bg-[#9333ea]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=elicit.com', category: 'research' },
+            { id: 'notebooklm', name: 'NotebookLM', color: 'bg-[#3b82f6]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=notebooklm.google.com', category: 'research' },
+            { id: 'clovanote', name: '클로바노트', color: 'bg-[#03c75a]', text: 'text-white', icon: 'https://ui-avatars.com/api/?name=CN&background=03c75a&color=fff&font-size=0.5&rounded=false&bold=true', category: 'research' },
+            { id: 'notion', name: 'Notion AI', color: 'bg-white', text: 'text-gray-900 border border-gray-300', icon: 'https://www.google.com/s2/favicons?sz=128&domain=notion.so', category: 'research' },
+            { id: 'deepl', name: 'DeepL', color: 'bg-[#0f2b46]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=deepl.com', category: 'research' },
+
+            // 3. 디자인 (design)
+            { id: 'midjourney', name: 'Midjourney', color: 'bg-white', text: 'text-gray-900 border border-gray-300', icon: 'https://www.google.com/s2/favicons?sz=128&domain=midjourney.com', category: 'design' },
+            { id: 'flux', name: 'FLUX', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=blackforestlabs.ai', category: 'design' },
+            { id: 'figma', name: 'Figma', color: 'bg-white', text: 'text-gray-900 border border-gray-300', icon: 'https://www.google.com/s2/favicons?sz=128&domain=figma.com', category: 'design' },
+            { id: 'canva', name: 'Canva', color: 'bg-[#00C4CC]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=canva.com', category: 'design' },
+            { id: 'gamma', name: 'Gamma', color: 'bg-[#a855f7]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=gamma.app', category: 'design' },
+            { id: 'comfyui', name: 'ComfyUI', color: 'bg-[#e5e7eb]', text: 'text-gray-900 border border-gray-300', icon: 'https://www.google.com/s2/favicons?sz=128&domain=comfy.org', category: 'design' },
+            { id: 'photoshop', name: 'Photoshop', color: 'bg-[#001e36]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=adobe.com', category: 'design' },
+            { id: 'nanobanana', name: 'Nano Banana', color: 'bg-[#facc15]', text: 'text-yellow-900 border border-yellow-400', icon: 'https://ui-avatars.com/api/?name=NB&background=facc15&color=713f12&font-size=0.5&rounded=false&bold=true', category: 'design' },
+
+            // 4. 영상/오디오 (video)
+            { id: 'runway', name: 'Runway', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=runwayml.com', category: 'video' },
+            { id: 'sora', name: 'Sora', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=openai.com', category: 'video' },
+            { id: 'kling', name: 'Kling AI', color: 'bg-[#0ea5e9]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=klingai.com', category: 'video' },
+            { id: 'hailuo', name: 'Hailuo', color: 'bg-[#f43f5e]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=hailuo.ai', category: 'video' },
+            { id: 'luma', name: 'Luma', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=lumalabs.ai', category: 'video' },
+            { id: 'elevenlabs', name: 'ElevenLabs', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=elevenlabs.io', category: 'video' },
+            { id: 'capcut', name: 'Capcut', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=capcut.com', category: 'video' },
+            { id: 'suno', name: 'Suno', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=suno.com', category: 'video' },
+            { id: 'veo', name: 'Veo', color: 'bg-[#4285f4]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=deepmind.google', category: 'video' },
+            
+            // 5. 3D 생성 (3d)
+            { id: 'tripo', name: 'Tripo', color: 'bg-[#1f2937]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=tripo3d.ai', category: '3d' },
+            { id: 'meshy', name: 'Meshy', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=meshy.ai', category: '3d' },
+            { id: 'csm', name: 'CSM', color: 'bg-black', text: 'text-white', icon: 'https://ui-avatars.com/api/?name=CSM&background=000&color=fff&font-size=0.4&rounded=false&bold=true', category: '3d' },
+            { id: 'spline', name: 'Spline', color: 'bg-white', text: 'text-gray-900 border border-gray-300', icon: 'https://www.google.com/s2/favicons?sz=128&domain=spline.design', category: '3d' },
+            { id: 'rodin', name: 'Rodin', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=deemos.com', category: '3d' },
+
+            // 6. 개발/자동화 (code)
+            { id: 'antigravity', name: 'Antigravity', color: 'bg-[#4285f4]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=google.com', category: 'code' },
+            { id: 'cursor', name: 'Cursor IDE', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=cursor.com', category: 'code' },
+            { id: 'windsurf', name: 'Windsurf', color: 'bg-[#0d9488]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=codeium.com', category: 'code' },
+            { id: 'bolt', name: 'Bolt.new', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=bolt.new', category: 'code' },
+            { id: 'replit', name: 'Replit', color: 'bg-[#f97316]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=replit.com', category: 'code' },
+            { id: 'v0', name: 'V0', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=v0.dev', category: 'code' },
+            { id: 'make', name: 'Make', color: 'bg-[#a855f7]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=make.com', category: 'code' },
+            { id: 'claudecode', name: 'Claude Code', color: 'bg-[#d97757]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=anthropic.com', category: 'code' },
+            { id: 'stitch', name: 'Stitch', color: 'bg-[#0d9488]', text: 'text-white', icon: 'https://ui-avatars.com/api/?name=St&background=0d9488&color=fff&font-size=0.5&rounded=false&bold=true', category: 'code' }
+        ];
+
+        // 아이템 렌더링 함수
+        function renderItems() {
+            aiTools.forEach(tool => {
+                const el = createItemElement(tool.id, tool.name, tool.color, tool.text, tool.icon);
+                // 카테고리별 pool ID를 동적으로 찾아서 추가
+                const targetPool = document.getElementById(`pool-${tool.category}`);
+                if (targetPool) {
+                    targetPool.appendChild(el);
+                }
+            });
+        }
+
+        // 개별 아이템 엘리먼트 생성 (정사각형 앱 아이콘 스타일)
+        function createItemElement(id, name, bgColor, textColor, iconUrl) {
+            const div = document.createElement('div');
+            div.id = id;
+            // 앱 아이콘 스타일: 정사각형(w-[72px] h-[72px]), 둥근 모서리, 호버 애니메이션
+            div.className = `draggable flex flex-col items-center justify-center w-[72px] h-[72px] rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all flex-shrink-0 ${bgColor} ${textColor}`;
+            div.draggable = true;
+            div.addEventListener('dragstart', drag);
+
+            // 로고 이미지 엘리먼트
+            if (iconUrl) {
+                const img = document.createElement('img');
+                img.src = iconUrl;
+                img.alt = name;
+                // 흰색 배경(bg-white) 패딩(p-0.5)과 라운딩을 주어 컬러 배경 카드 위에서도 로고가 아주 선명하게 보이도록 수정
+                img.className = "w-7 h-7 object-contain mb-1 pointer-events-none bg-white rounded-md p-0.5 drop-shadow-sm"; 
+                // 이미지 로드 실패 시 숨김 처리
+                img.onerror = function() {
+                    this.style.display = 'none';
+                };
+                div.appendChild(img);
+            }
+
+            // 이름 텍스트 엘리먼트
+            const nameSpan = document.createElement('span');
+            nameSpan.className = "text-[10px] font-bold leading-tight text-center w-full px-1 truncate pointer-events-none";
+            nameSpan.innerText = name;
+            div.appendChild(nameSpan);
+
+            return div;
+        }
+
+        // 커스텀 AI 추가 기능 (이니셜이 포함된 앱 아이콘 생성)
+        function addCustomAI() {
+            const name = prompt("추가할 AI 도구의 이름을 입력하세요:");
+            if (name && name.trim() !== "") {
+                const id = 'custom-' + Date.now();
+                // 첫 글자를 딴 이니셜 아이콘 자동 생성
+                const initial = name.trim().charAt(0).toUpperCase();
+                const iconUrl = `https://ui-avatars.com/api/?name=${initial}&background=fef08a&color=854d0e&font-size=0.6&rounded=false&bold=true`;
+                
+                const el = createItemElement(id, name, 'bg-yellow-200', 'text-yellow-800 border border-yellow-400', iconUrl);
+                // 커스텀 도구는 '글쓰기/작업' 보관함에 기본 추가됩니다
+                document.getElementById('pool-writing').appendChild(el);
+            }
+        }
+
+        // --- 드래그 앤 드롭 로직 ---
+        let draggedItem = null;
+
+        function drag(ev) {
+            draggedItem = ev.target;
+            ev.dataTransfer.setData("text", ev.target.id);
+            ev.target.style.opacity = '0.5';
+        }
+
+        document.addEventListener('dragend', function(ev) {
+            if (draggedItem) {
+                draggedItem.style.opacity = '1';
+                draggedItem = null;
+            }
+            // 드래그 종료 시 모든 dropzone의 hover 이펙트 제거
+            document.querySelectorAll('.dropzone').forEach(zone => {
+                zone.classList.remove('dragover');
+            });
+        });
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            // hover 이펙트 추가
+            if(ev.target.classList.contains('dropzone')) {
+                ev.target.classList.add('dragover');
+            } else if (ev.target.closest('.dropzone')) {
+                ev.target.closest('.dropzone').classList.add('dragover');
+            }
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text");
+            const element = document.getElementById(data);
+            
+            // dropzone 찾기
+            let targetZone = ev.target;
+            if (!targetZone.classList.contains('dropzone')) {
+                targetZone = targetZone.closest('.dropzone');
+            }
+
+            if (targetZone && element) {
+                targetZone.appendChild(element);
+            }
+
+            // hover 이펙트 제거
+            document.querySelectorAll('.dropzone').forEach(zone => {
+                zone.classList.remove('dragover');
+            });
+        }
+
+        // 드래그 영역 밖으로 나갈 때 hover 이펙트 제거
+        document.querySelectorAll('.dropzone').forEach(zone => {
+            zone.addEventListener('dragleave', function(ev) {
+                ev.target.classList.remove('dragover');
+            });
+        });
+
+        // 초기화 실행
+        window.onload = renderItems;
+
+    </script>
+</body>
+</html>
