@@ -40,26 +40,8 @@
                 min-height: 100px !important;
             }
 
-            /* --- 맞춤형 인쇄 모드 상태 제어 --- */
-            
-            /* 1. 빈 양식 인쇄 모드: 보관함 숨김, 표 안의 아이템 숨김 */
-            body.print-empty-board #item-pool-container { display: none !important; }
-            body.print-empty-board #tier-board .draggable { display: none !important; }
-
-            /* 2. 결과 인쇄 모드: 보관함만 숨김 (표 안의 아이템은 표시) */
+            /* 결과 인쇄 모드: 보관함 숨김 */
             body.print-result #item-pool-container { display: none !important; }
-
-            /* 3. 아이콘 인쇄 모드 (오리기용): 헤더와 표 숨김, 보관함만 전체 화면으로 표시 */
-            body.print-icons #main-header { display: none !important; }
-            body.print-icons #tier-board { display: none !important; }
-            body.print-icons .a4-container { height: auto !important; min-height: 0 !important; }
-            body.print-icons #item-pool-container { margin-top: 0 !important; }
-            
-            /* 가위질이 쉽도록 아이콘 주변에 약간의 여백/절취선 느낌 추가 */
-            body.print-icons .draggable { 
-                border: 1px dashed #ccc !important; 
-                margin: 2px !important; 
-            }
         }
 
         /* A4 가로 비율 컨테이너 (웹 뷰용) */
@@ -84,11 +66,18 @@
             transform: scale(1.05);
         }
         .dropzone {
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, outline 0.2s;
         }
         .dropzone.dragover {
             background-color: rgba(255, 255, 255, 0.5);
             outline: 2px dashed #4b5563;
+        }
+        
+        /* 빠른 배치 패널 전용 dragover 스타일 */
+        .quick-drop.dragover {
+            background-color: white !important;
+            transform: scale(1.1);
+            outline-width: 3px !important;
         }
 
         .tier-label {
@@ -98,37 +87,49 @@
 </head>
 <body>
 
-    <!-- 컨트롤 패널 (인쇄 시 숨김) -->
+    <!-- 컨트롤 패널 (결과 저장 플로팅 버튼) -->
     <div class="fixed top-4 right-4 flex flex-col gap-2 no-print z-50">
-        <button onclick="addCustomAI()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow flex items-center justify-center gap-2 transition w-full">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i> 새로운 AI 추가
+        <button onclick="printResult()" class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transition font-bold tooltip hover:-translate-y-0.5" title="현재 완성된 표를 PDF로 저장하거나 인쇄합니다">
+            <i data-lucide="printer" class="w-5 h-5"></i> 결과 인쇄/저장
         </button>
-        <div class="flex gap-2">
-            <button onclick="printEmptyBoard()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 px-3 py-2 rounded-lg shadow-sm flex items-center gap-1 transition text-sm font-semibold tooltip" title="빈 표만 출력합니다">
-                <i data-lucide="file" class="w-4 h-4"></i> 빈 양식
-            </button>
-            <button onclick="printResult()" class="bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded-lg shadow-sm flex items-center gap-1 transition text-sm font-semibold tooltip" title="현재 결과만 출력합니다">
-                <i data-lucide="save" class="w-4 h-4"></i> 결과 저장
-            </button>
-            <button onclick="printIcons()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg shadow-sm flex items-center gap-1 transition text-sm font-semibold tooltip" title="오리기용 아이콘만 출력합니다">
-                <i data-lucide="scissors" class="w-4 h-4"></i> 아이콘만
-            </button>
-        </div>
+    </div>
+
+    <!-- 우측 빠른 배치(Quick Drop) 플로팅 패널 -->
+    <div class="fixed top-1/2 right-4 transform -translate-y-1/2 flex flex-col gap-3 bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl p-3 border border-gray-200 z-40 no-print transition-all hover:bg-white">
+        <div class="text-[11px] font-extrabold text-gray-500 text-center leading-tight">빠른<br>배치</div>
+        <!-- data-target 속성을 이용해 드롭 시 실제 티어 영역으로 아이콘을 보냅니다 -->
+        <div class="w-14 h-14 bg-red-50 border-2 border-dashed border-red-200 hover:border-red-400 rounded-xl flex items-center justify-center font-black text-red-500 text-xl dropzone quick-drop transition-all" data-target="tier-god" ondrop="drop(event)" ondragover="allowDrop(event)" title="GOD 티어로 보내기">GOD</div>
+        <div class="w-14 h-14 bg-orange-50 border-2 border-dashed border-orange-200 hover:border-orange-400 rounded-xl flex items-center justify-center font-black text-orange-500 text-xl dropzone quick-drop transition-all" data-target="tier-a" ondrop="drop(event)" ondragover="allowDrop(event)" title="A 티어로 보내기">A</div>
+        <div class="w-14 h-14 bg-yellow-50 border-2 border-dashed border-yellow-200 hover:border-yellow-400 rounded-xl flex items-center justify-center font-black text-yellow-500 text-xl dropzone quick-drop transition-all" data-target="tier-b" ondrop="drop(event)" ondragover="allowDrop(event)" title="B 티어로 보내기">B</div>
+        <div class="w-14 h-14 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-gray-500 rounded-xl flex items-center justify-center font-black text-gray-500 text-xl dropzone quick-drop transition-all" data-target="tier-f" ondrop="drop(event)" ondragover="allowDrop(event)" title="F 티어로 보내기">F</div>
     </div>
 
     <!-- A4 캔버스 영역 -->
     <div class="a4-container rounded-xl relative">
         
         <!-- 헤더 영역 -->
-        <header id="main-header" class="flex justify-between items-end border-b-2 border-gray-200 pb-4 mb-6">
+        <header id="main-header" class="flex justify-between items-end border-b-2 border-gray-200 pb-4 mb-6 relative">
             <div>
-                <h1 class="text-3xl font-bold text-gray-800 tracking-tight">AI 도구 티어 게임</h1>
+                <div class="flex items-center gap-4">
+                    <h1 class="text-3xl font-bold text-gray-800 tracking-tight">AI 도구 티어 게임</h1>
+                    
+                    <!-- 초기화 및 되돌리기 (인쇄 시 숨김) -->
+                    <div class="flex items-center gap-2 no-print mt-1">
+                        <button onclick="showResetModal()" class="flex items-center gap-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2.5 py-1.5 rounded-md border border-red-200 transition font-medium">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> 초기화
+                        </button>
+                        <button id="undo-btn" onclick="undoReset()" class="hidden flex items-center gap-1 text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2.5 py-1.5 rounded-md border border-indigo-200 transition font-medium">
+                            <i data-lucide="undo-2" class="w-3.5 h-3.5"></i> 되돌리기
+                        </button>
+                    </div>
+                </div>
                 <p class="text-gray-500 mt-1 text-sm">연구를 위한 에이전틱 AI 설계 FGI 사전 활동</p>
             </div>
+            
             <div class="flex gap-4 items-center">
                 <div class="text-sm font-medium text-gray-700 flex items-center gap-2">
                     <span>참여자 :</span>
-                    <input type="text" placeholder="이름 입력" class="border-b border-gray-400 focus:outline-none focus:border-indigo-600 px-1 w-24 text-center bg-transparent">
+                    <input type="text" id="user-name-input" oninput="saveState()" placeholder="이름 입력" class="border-b border-gray-400 focus:outline-none focus:border-indigo-600 px-1 w-24 text-center bg-transparent transition-colors">
                 </div>
             </div>
         </header>
@@ -142,9 +143,7 @@
                     <span class="text-2xl font-black tier-label">GOD</span>
                     <span class="text-[10px] text-center mt-1 font-medium leading-tight opacity-90">내 뇌의 일부<br>(없으면 연구 올스톱)</span>
                 </div>
-                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center" id="tier-god" ondrop="drop(event)" ondragover="allowDrop(event)">
-                    <!-- Items go here -->
-                </div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center" id="tier-god" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
             </div>
 
             <!-- A Tier -->
@@ -177,9 +176,10 @@
         </div>
 
         <!-- 아이콘 보관함 (대기열) - 카테고리별 분류 -->
-        <div id="item-pool-container" class="mt-6">
+        <div id="item-pool-container" class="mt-6 pr-12"> <!-- 빠른 배치 창과 겹치지 않게 우측 패딩 추가 -->
             <div class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-1">
-                <i data-lucide="layout-grid" class="w-4 h-4"></i> 평가 대기중인 AI 도구 <span class="text-xs font-normal text-gray-400 ml-2">(인쇄하여 가위로 오려 사용하거나 웹에서 드래그하세요)</span>
+                <i data-lucide="layout-grid" class="w-4 h-4"></i> 평가 대기중인 AI 도구 
+                <span class="text-xs font-normal text-gray-400 ml-2">(우측 '빠른 배치' 창으로 드래그하면 더 쉽습니다)</span>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -218,35 +218,58 @@
                     <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="code" class="w-3 h-3"></i> 개발, 노코드 및 자동화</h3>
                     <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-code" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
                 </div>
+
+                <!-- 7. 사용자 추가 AI -->
+                <div id="custom-pool-section" class="md:col-span-2 hidden">
+                    <h3 class="text-xs font-semibold text-indigo-500 mb-1 flex items-center gap-1"><i data-lucide="folder-plus" class="w-3 h-3"></i> 사용자 추가 AI</h3>
+                    <div class="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-custom" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+            </div>
+            
+            <!-- 커스텀 AI 추가 영역 -->
+            <div class="mt-8 flex flex-col items-center justify-center p-6 bg-indigo-50/50 rounded-xl border border-dashed border-indigo-200 no-print">
+                <p class="text-sm text-gray-600 mb-3 font-medium">사용하시는 AI가 목록에 없으신가요?</p>
+                <button onclick="addCustomAI()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg shadow-md flex items-center justify-center gap-2 transition font-bold hover:-translate-y-0.5">
+                    <i data-lucide="plus-circle" class="w-5 h-5"></i> 새로운 AI 추가하기
+                </button>
             </div>
         </div>
 
+    </div>
+
+    <!-- 초기화 확인 모달 UI (브라우저 기본 경고창 대체) -->
+    <div id="reset-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] opacity-0 transition-opacity duration-200">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full transform scale-95 transition-transform duration-200" id="reset-modal-content">
+            <div class="flex items-center gap-3 text-red-600 mb-4">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                <h3 class="text-lg font-bold text-gray-900">배치 초기화</h3>
+            </div>
+            <p class="text-gray-600 text-sm mb-6 leading-relaxed">
+                현재 배치된 모든 도구를 원래 위치(보관함)로 되돌리시겠습니까?<br>
+                <span class="text-xs text-gray-400 mt-1 block">* 초기화 후 '되돌리기' 버튼을 통해 복구할 수 있습니다.</span>
+            </p>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold transition">취소</button>
+                <button onclick="executeReset()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition shadow-sm">초기화 진행</button>
+            </div>
+        </div>
     </div>
 
     <script>
         // Lucide 아이콘 초기화
         lucide.createIcons();
 
-        // 인쇄 모드 제어 함수
-        function printEmptyBoard() {
-            document.body.classList.add('print-empty-board');
-            window.print();
-            document.body.classList.remove('print-empty-board');
-        }
-
+        // 인쇄 모드 제어 함수 (결과 저장용)
         function printResult() {
             document.body.classList.add('print-result');
             window.print();
             document.body.classList.remove('print-result');
         }
 
-        function printIcons() {
-            document.body.classList.add('print-icons');
-            window.print();
-            document.body.classList.remove('print-icons');
-        }
+        // 제공해주신 MS Copilot 원본 SVG 코드
+        const copilotSVG = `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="size-5"><path d="M22.9253 4.97196C22.5214 3.79244 21.4126 3 20.1658 3L18.774 3C17.3622 3 16.1532 4.01106 15.9033 5.40051L14.4509 13.4782L15.0163 11.5829C15.3849 10.347 16.5215 9.5 17.8112 9.5L23.0593 9.5L25.3054 10.809L27.4705 9.5H26.5598C25.313 9.5 24.2042 8.70756 23.8003 7.52804L22.9253 4.97196Z" fill="url(#673znulf-paint0_radial_262034_2117)"></path><path d="M9.39637 27.0147C9.79613 28.2011 10.9084 29 12.1604 29H14.5727C16.1772 29 17.4805 27.704 17.4893 26.0995L17.5315 18.4862L16.9699 20.4033C16.6058 21.6461 15.4659 22.5 14.1708 22.5H8.88959L6.96437 21.0214L4.88007 22.5H5.78013C7.03206 22.5 8.14435 23.299 8.54411 24.4853L9.39637 27.0147Z" fill="url(#673znulf-paint1_radial_262034_2117)"></path><path d="M19.7501 3H8.81266C5.68767 3 3.81268 7.08916 2.56269 11.1783C1.08177 16.0229 -0.856044 22.5021 4.75017 22.5021H9.66051C10.9615 22.5021 12.105 21.6415 12.4657 20.3915C13.2784 17.5759 14.7501 12.4993 15.9014 8.65192C16.4758 6.73249 16.9543 5.08404 17.6886 4.05749C18.1003 3.48196 18.7864 3 19.7501 3Z" fill="url(#673znulf-paint2_radial_262034_2117)"></path><path d="M19.7501 3H8.81266C5.68767 3 3.81268 7.08916 2.56269 11.1783C1.08177 16.0229 -0.856044 22.5021 4.75017 22.5021H9.66051C10.9615 22.5021 12.105 21.6415 12.4657 20.3915C13.2784 17.5759 14.7501 12.4993 15.9014 8.65192C16.4758 6.73249 16.9543 5.08404 17.6886 4.05749C18.1003 3.48196 18.7864 3 19.7501 3Z" fill="url(#673znulf-paint3_linear_262034_2117)"></path><path d="M12.2478 29H23.1852C26.3102 29 28.1852 24.9103 29.4352 20.8207C30.9161 15.9755 32.854 9.49548 27.2477 9.49548H22.3375C21.0364 9.49548 19.893 10.3562 19.5322 11.6062C18.7196 14.4221 17.2479 19.4994 16.0965 23.3474C15.5221 25.2671 15.0436 26.9157 14.3093 27.9424C13.8976 28.518 13.2115 29 12.2478 29Z" fill="url(#673znulf-paint4_radial_262034_2117)"></path><path d="M12.2478 29H23.1852C26.3102 29 28.1852 24.9103 29.4352 20.8207C30.9161 15.9755 32.854 9.49548 27.2477 9.49548H22.3375C21.0364 9.49548 19.893 10.3562 19.5322 11.6062C18.7196 14.4221 17.2479 19.4994 16.0965 23.3474C15.5221 25.2671 15.0436 26.9157 14.3093 27.9424C13.8976 28.518 13.2115 29 12.2478 29Z" fill="url(#673znulf-paint5_linear_262034_2117)"></path><defs><radialGradient id="673znulf-paint0_radial_262034_2117" cx="0" cy="0" r="1" gradientTransform="matrix(-7.37821 -8.55084 -7.96607 7.17216 25.5747 13.5466)" gradientUnits="userSpaceOnUse"><stop offset="0.0955758" stop-color="#00AEFF"></stop><stop offset="0.773185" stop-color="#2253CE"></stop><stop offset="1" stop-color="#0736C4"></stop></radialGradient><radialGradient id="673znulf-paint1_radial_262034_2117" cx="0" cy="0" r="1" gradientTransform="matrix(6.61516 7.92888 7.80904 -6.47171 7.1753 21.9482)" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB657"></stop><stop offset="0.633728" stop-color="#FF5F3D"></stop><stop offset="0.923392" stop-color="#C02B3C"></stop></radialGradient><radialGradient id="673znulf-paint2_radial_262034_2117" cx="0" cy="0" r="1" gradientTransform="matrix(-0.990905 -17.2799 98.0282 -5.51056 8.54161 22.4952)" gradientUnits="userSpaceOnUse"><stop offset="0.03" stop-color="#FFC800"></stop><stop offset="0.31" stop-color="#98BD42"></stop><stop offset="0.49" stop-color="#52B471"></stop><stop offset="0.843838" stop-color="#0D91E1"></stop></radialGradient><linearGradient id="673znulf-paint3_linear_262034_2117" x1="9.52186" y1="3" x2="10.3572" y2="22.5029" gradientUnits="userSpaceOnUse"><stop stop-color="#3DCBFF"></stop><stop offset="0.246674" stop-color="#0588F7" stop-opacity="0"></stop></linearGradient><radialGradient id="673znulf-paint4_radial_262034_2117" cx="0" cy="0" r="1" gradientTransform="matrix(-8.64067 24.4636 -29.4075 -10.797 27.8096 7.58585)" gradientUnits="userSpaceOnUse"><stop offset="0.0661714" stop-color="#8C48FF"></stop><stop offset="0.5" stop-color="#F2598A"></stop><stop offset="0.895833" stop-color="#FFB152"></stop></radialGradient><linearGradient id="673znulf-paint5_linear_262034_2117" x1="28.6736" y1="8.30469" x2="28.6627" y2="13.617" gradientUnits="userSpaceOnUse"><stop offset="0.0581535" stop-color="#F8ADFA"></stop><stop offset="0.708063" stop-color="#A86EDD" stop-opacity="0"></stop></linearGradient></defs></svg>`;
 
-        // 대학원생/연구자들이 자주 쓰는 AI 리스트 (Google Favicon 서비스 연동 + 브랜드 컬러 보정)
+        // 대학원생/연구자들이 자주 쓰는 AI 리스트
         const aiTools = [
             // 1. 글쓰기 (writing)
             { id: 'chatgpt', name: 'ChatGPT', color: 'bg-[#10a37f]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=chatgpt.com', category: 'writing' },
@@ -254,7 +277,7 @@
             { id: 'gemini', name: 'Gemini', color: 'bg-gradient-to-br from-[#4285f4] via-[#9b72cb] to-[#d96570]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=gemini.google.com', category: 'writing' },
             { id: 'deepseek', name: 'DeepSeek', color: 'bg-[#1d4ed8]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=deepseek.com', category: 'writing' },
             { id: 'grok', name: 'Grok', color: 'bg-black', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=x.ai', category: 'writing' },
-            { id: 'copilot', name: 'Copilot', color: 'bg-[#1f2328]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=copilot.microsoft.com', category: 'writing' },
+            { id: 'copilot', name: 'Copilot', color: 'bg-white', text: 'text-gray-900 border border-gray-300', icon: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(copilotSVG), category: 'writing' },
             { id: 'wrtn', name: '뤼튼(Wrtn)', color: 'bg-[#ff3a5e]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=wrtn.ai', category: 'writing' },
             { id: 'lechat', name: 'Le Chat', color: 'bg-[#f97316]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=mistral.ai', category: 'writing' },
             { id: 'poe', name: 'Poe', color: 'bg-[#7c3aed]', text: 'text-white', icon: 'https://www.google.com/s2/favicons?sz=128&domain=poe.com', category: 'writing' },
@@ -308,42 +331,176 @@
             { id: 'stitch', name: 'Stitch', color: 'bg-[#0d9488]', text: 'text-white', icon: 'https://ui-avatars.com/api/?name=St&background=0d9488&color=fff&font-size=0.5&rounded=false&bold=true', category: 'code' }
         ];
 
-        // 아이템 렌더링 함수
+        // ----------------------------------------------------
+        // 데이터 영구 보존(localStorage) 및 상태 관리 로직
+        // ----------------------------------------------------
+        let customToolsData = [];
+
+        function saveState() {
+            const state = {
+                userName: document.getElementById('user-name-input').value,
+                customTools: customToolsData,
+                positions: {}
+            };
+            
+            // 모든 draggable 요소의 현재 부모(dropzone) ID 기록
+            document.querySelectorAll('.draggable').forEach(el => {
+                const parent = el.closest('.dropzone');
+                // 빠른 배치가 아닌 실제 티어 및 보관함 ID만 저장
+                if (parent && parent.id && !parent.id.startsWith('quick-')) {
+                    state.positions[el.id] = parent.id;
+                }
+            });
+            
+            localStorage.setItem('aiTier_state', JSON.stringify(state));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('aiTier_state');
+            if (!saved) return;
+            
+            try {
+                const state = JSON.parse(saved);
+                
+                // 이름 복원
+                if (state.userName) {
+                    document.getElementById('user-name-input').value = state.userName;
+                }
+                
+                // 커스텀 툴 복원
+                if (state.customTools && state.customTools.length > 0) {
+                    document.getElementById('custom-pool-section').classList.remove('hidden');
+                    state.customTools.forEach(tool => {
+                        if (!document.getElementById(tool.id)) {
+                            const el = createItemElement(tool.id, tool.name, tool.bgColor, tool.textColor, tool.iconUrl);
+                            document.getElementById('pool-custom').appendChild(el);
+                            customToolsData.push(tool);
+                        }
+                    });
+                }
+                
+                // 위치 복원
+                if (state.positions) {
+                    for (const [itemId, parentId] of Object.entries(state.positions)) {
+                        const item = document.getElementById(itemId);
+                        const parent = document.getElementById(parentId);
+                        if (item && parent) {
+                            parent.appendChild(item);
+                        }
+                    }
+                }
+
+                // 되돌리기 가능 여부 체크
+                if (localStorage.getItem('aiTier_backupState')) {
+                    document.getElementById('undo-btn').classList.remove('hidden');
+                }
+                
+            } catch (e) {
+                console.error("Failed to load saved state", e);
+            }
+        }
+
+        // --- 초기화 및 복구 모달 관련 ---
+
+        function showResetModal() {
+            const modal = document.getElementById('reset-modal');
+            const content = document.getElementById('reset-modal-content');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // 약간의 딜레이를 주어 애니메이션 효과 활성화
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('reset-modal');
+            const content = document.getElementById('reset-modal-content');
+            
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        function executeReset() {
+            // 현재 상태를 백업본으로 저장 (되돌리기용)
+            const currentState = localStorage.getItem('aiTier_state');
+            if (currentState) {
+                localStorage.setItem('aiTier_backupState', currentState);
+            }
+
+            // 기본 도구들 원래 위치로 이동
+            aiTools.forEach(tool => {
+                const el = document.getElementById(tool.id);
+                const parent = document.getElementById(`pool-${tool.category}`);
+                if (el && parent) parent.appendChild(el);
+            });
+
+            // 커스텀 도구들 원래 위치로 이동
+            customToolsData.forEach(tool => {
+                const el = document.getElementById(tool.id);
+                const parent = document.getElementById('pool-custom');
+                if (el && parent) parent.appendChild(el);
+            });
+
+            // 이름 초기화
+            document.getElementById('user-name-input').value = "";
+
+            // 되돌리기 버튼 노출 및 상태 갱신
+            document.getElementById('undo-btn').classList.remove('hidden');
+            saveState();
+            closeModal();
+        }
+
+        function undoReset() {
+            const backup = localStorage.getItem('aiTier_backupState');
+            if (backup) {
+                // 백업 상태를 현재 상태로 복구
+                localStorage.setItem('aiTier_state', backup);
+                localStorage.removeItem('aiTier_backupState');
+                
+                // 화면에 다시 로드
+                loadState();
+                
+                // 복구 완료 후 되돌리기 버튼 숨김
+                document.getElementById('undo-btn').classList.add('hidden');
+            }
+        }
+
+        // ----------------------------------------------------
+        // UI 렌더링 및 드래그 앤 드롭
+        // ----------------------------------------------------
+
         function renderItems() {
             aiTools.forEach(tool => {
                 const el = createItemElement(tool.id, tool.name, tool.color, tool.text, tool.icon);
-                // 카테고리별 pool ID를 동적으로 찾아서 추가
                 const targetPool = document.getElementById(`pool-${tool.category}`);
-                if (targetPool) {
-                    targetPool.appendChild(el);
-                }
+                if (targetPool) targetPool.appendChild(el);
             });
         }
 
-        // 개별 아이템 엘리먼트 생성 (정사각형 앱 아이콘 스타일)
         function createItemElement(id, name, bgColor, textColor, iconUrl) {
             const div = document.createElement('div');
             div.id = id;
-            // 앱 아이콘 스타일: 정사각형(w-[72px] h-[72px]), 둥근 모서리, 호버 애니메이션
             div.className = `draggable flex flex-col items-center justify-center w-[72px] h-[72px] rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all flex-shrink-0 ${bgColor} ${textColor}`;
             div.draggable = true;
             div.addEventListener('dragstart', drag);
 
-            // 로고 이미지 엘리먼트
             if (iconUrl) {
                 const img = document.createElement('img');
                 img.src = iconUrl;
                 img.alt = name;
-                // 흰색 배경(bg-white) 패딩(p-0.5)과 라운딩을 주어 컬러 배경 카드 위에서도 로고가 아주 선명하게 보이도록 수정
                 img.className = "w-7 h-7 object-contain mb-1 pointer-events-none bg-white rounded-md p-0.5 drop-shadow-sm"; 
-                // 이미지 로드 실패 시 숨김 처리
-                img.onerror = function() {
-                    this.style.display = 'none';
-                };
+                img.onerror = function() { this.style.display = 'none'; };
                 div.appendChild(img);
             }
 
-            // 이름 텍스트 엘리먼트
             const nameSpan = document.createElement('span');
             nameSpan.className = "text-[10px] font-bold leading-tight text-center w-full px-1 truncate pointer-events-none";
             nameSpan.innerText = name;
@@ -352,22 +509,33 @@
             return div;
         }
 
-        // 커스텀 AI 추가 기능 (이니셜이 포함된 앱 아이콘 생성)
         function addCustomAI() {
             const name = prompt("추가할 AI 도구의 이름을 입력하세요:");
             if (name && name.trim() !== "") {
                 const id = 'custom-' + Date.now();
-                // 첫 글자를 딴 이니셜 아이콘 자동 생성
                 const initial = name.trim().charAt(0).toUpperCase();
                 const iconUrl = `https://ui-avatars.com/api/?name=${initial}&background=fef08a&color=854d0e&font-size=0.6&rounded=false&bold=true`;
                 
-                const el = createItemElement(id, name, 'bg-yellow-200', 'text-yellow-800 border border-yellow-400', iconUrl);
-                // 커스텀 도구는 '글쓰기/작업' 보관함에 기본 추가됩니다
-                document.getElementById('pool-writing').appendChild(el);
+                // 상태 관리를 위한 객체화
+                const toolData = {
+                    id: id,
+                    name: name,
+                    bgColor: 'bg-yellow-200',
+                    textColor: 'text-yellow-800 border border-yellow-400',
+                    iconUrl: iconUrl
+                };
+
+                const el = createItemElement(toolData.id, toolData.name, toolData.bgColor, toolData.textColor, toolData.iconUrl);
+                
+                document.getElementById('custom-pool-section').classList.remove('hidden');
+                document.getElementById('pool-custom').appendChild(el);
+                
+                // 데이터 배열에 추가 및 저장
+                customToolsData.push(toolData);
+                saveState();
             }
         }
 
-        // --- 드래그 앤 드롭 로직 ---
         let draggedItem = null;
 
         function drag(ev) {
@@ -381,7 +549,6 @@
                 draggedItem.style.opacity = '1';
                 draggedItem = null;
             }
-            // 드래그 종료 시 모든 dropzone의 hover 이펙트 제거
             document.querySelectorAll('.dropzone').forEach(zone => {
                 zone.classList.remove('dragover');
             });
@@ -389,7 +556,6 @@
 
         function allowDrop(ev) {
             ev.preventDefault();
-            // hover 이펙트 추가
             if(ev.target.classList.contains('dropzone')) {
                 ev.target.classList.add('dragover');
             } else if (ev.target.closest('.dropzone')) {
@@ -402,31 +568,38 @@
             const data = ev.dataTransfer.getData("text");
             const element = document.getElementById(data);
             
-            // dropzone 찾기
             let targetZone = ev.target;
             if (!targetZone.classList.contains('dropzone')) {
                 targetZone = targetZone.closest('.dropzone');
             }
 
-            if (targetZone && element) {
-                targetZone.appendChild(element);
+            // 빠른 배치(우측 패널)로 드롭된 경우, data-target 속성을 읽어 실제 티어 보드로 목적지를 변경
+            if (targetZone && targetZone.hasAttribute('data-target')) {
+                const actualTargetId = targetZone.getAttribute('data-target');
+                targetZone = document.getElementById(actualTargetId);
             }
 
-            // hover 이펙트 제거
+            if (targetZone && element) {
+                targetZone.appendChild(element);
+                saveState(); // 드롭 완료 시마다 상태 자동 저장
+            }
+
             document.querySelectorAll('.dropzone').forEach(zone => {
                 zone.classList.remove('dragover');
             });
         }
 
-        // 드래그 영역 밖으로 나갈 때 hover 이펙트 제거
         document.querySelectorAll('.dropzone').forEach(zone => {
             zone.addEventListener('dragleave', function(ev) {
                 ev.target.classList.remove('dragover');
             });
         });
 
-        // 초기화 실행
-        window.onload = renderItems;
+        // 페이지 로드 시 렌더링 후 상태 복원 실행
+        window.onload = () => {
+            renderItems();
+            loadState();
+        };
 
     </script>
 </body>
