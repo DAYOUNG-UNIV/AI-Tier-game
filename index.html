@@ -92,7 +92,7 @@
         }
     </style>
 </head>
-<body>
+<body class="pb-24 md:pb-0"> <!-- 모바일에서 하단 플로팅 바에 가려지지 않도록 여백 추가 -->
 
     <!-- 컨트롤 패널 (결과 저장 플로팅 버튼) -->
     <div class="fixed top-4 right-4 flex flex-col gap-2 no-print z-50">
@@ -101,14 +101,16 @@
         </button>
     </div>
 
-    <!-- 우측 빠른 배치(Quick Drop) 플로팅 패널 -->
-    <div class="fixed top-1/2 right-4 transform -translate-y-1/2 flex flex-col gap-3 bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl p-3 border border-gray-200 z-40 no-print transition-all hover:bg-white hidden md:flex">
-        <div class="text-[11px] font-extrabold text-gray-500 text-center leading-tight">빠른<br>배치</div>
+    <!-- 빠른 배치(Quick Drop) 플로팅 패널 (반응형: 모바일은 하단 가로, PC는 우측 세로) -->
+    <div class="fixed z-40 no-print transition-all bg-white/95 backdrop-blur-md shadow-[0_-5px_15px_rgba(0,0,0,0.1)] border border-gray-200 
+                bottom-0 left-0 right-0 w-full rounded-t-2xl p-3 flex flex-row justify-center items-center gap-3
+                md:top-1/2 md:right-4 md:bottom-auto md:left-auto md:w-auto md:transform md:-translate-y-1/2 md:flex-col md:rounded-2xl md:shadow-2xl md:bg-white/80 hover:bg-white">
+        <div class="text-[10px] md:text-[11px] font-extrabold text-gray-500 text-center leading-tight whitespace-nowrap">빠른<br class="hidden md:block">배치</div>
         <!-- data-target 속성을 이용해 드롭 시 실제 티어 영역으로 아이콘을 보냅니다 -->
-        <div class="w-14 h-14 bg-red-50 border-2 border-dashed border-red-200 hover:border-red-400 rounded-xl flex items-center justify-center font-black text-red-500 text-xl dropzone quick-drop transition-all" data-target="tier-god" title="GOD 티어로 보내기">GOD</div>
-        <div class="w-14 h-14 bg-orange-50 border-2 border-dashed border-orange-200 hover:border-orange-400 rounded-xl flex items-center justify-center font-black text-orange-500 text-xl dropzone quick-drop transition-all" data-target="tier-a" title="A 티어로 보내기">A</div>
-        <div class="w-14 h-14 bg-yellow-50 border-2 border-dashed border-yellow-200 hover:border-yellow-400 rounded-xl flex items-center justify-center font-black text-yellow-500 text-xl dropzone quick-drop transition-all" data-target="tier-b" title="B 티어로 보내기">B</div>
-        <div class="w-14 h-14 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-gray-500 rounded-xl flex items-center justify-center font-black text-gray-500 text-xl dropzone quick-drop transition-all" data-target="tier-f" title="F 티어로 보내기">F</div>
+        <div class="w-12 h-12 md:w-14 md:h-14 bg-red-50 border-2 border-dashed border-red-200 hover:border-red-400 rounded-xl flex items-center justify-center font-black text-red-500 text-lg md:text-xl dropzone quick-drop transition-all" data-target="tier-god" title="GOD 티어로 보내기">GOD</div>
+        <div class="w-12 h-12 md:w-14 md:h-14 bg-orange-50 border-2 border-dashed border-orange-200 hover:border-orange-400 rounded-xl flex items-center justify-center font-black text-orange-500 text-lg md:text-xl dropzone quick-drop transition-all" data-target="tier-a" title="A 티어로 보내기">A</div>
+        <div class="w-12 h-12 md:w-14 md:h-14 bg-yellow-50 border-2 border-dashed border-yellow-200 hover:border-yellow-400 rounded-xl flex items-center justify-center font-black text-yellow-500 text-lg md:text-xl dropzone quick-drop transition-all" data-target="tier-b" title="B 티어로 보내기">B</div>
+        <div class="w-12 h-12 md:w-14 md:h-14 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-gray-500 rounded-xl flex items-center justify-center font-black text-gray-500 text-lg md:text-xl dropzone quick-drop transition-all" data-target="tier-f" title="F 티어로 보내기">F</div>
     </div>
 
     <!-- A4 캔버스 영역 -->
@@ -528,10 +530,11 @@
                     group: 'ai-tools', // 모든 영역을 같은 그룹으로 묶어 상호 드래그 허용
                     animation: 150, // 부드러운 위치 이동 애니메이션
                     
-                    // 모바일 사용자 경험 최적화 (터치 스크롤과 구별)
-                    delay: 100, // 터치 시 0.1초 눌러야 드래그 시작
+                    // 모바일 사용자 경험 최적화
+                    delay: 150, // 터치 시 0.15초 눌러야 드래그 시작 (간헐적 씹힘 개선)
                     delayOnTouchOnly: true, // 데스크탑 마우스는 딜레이 없이 즉시 시작
-                    touchStartThreshold: 3, // 손가락이 3px 이상 벗어나면 일반 스크롤로 간주
+                    touchStartThreshold: 5, // 손가락이 5px 이상 벗어나면 드래그 취소 후 일반 스크롤로 간주
+                    fallbackTolerance: 3, // 모바일 브라우저에 따른 터치 흔들림 보정
                     
                     ghostClass: 'sortable-ghost',
                     dragClass: 'sortable-drag',
