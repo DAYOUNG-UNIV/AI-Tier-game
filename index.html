@@ -8,8 +8,11 @@
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- 모바일 터치 드래그 앤 드롭 지원을 위한 Polyfill 라이브러리 추가 -->
-    <script src="https://cdn.jsdelivr.net/npm/drag-drop-touch@1.0.20/DragDropTouch.min.js"></script>
+    <!-- 모바일 호환성이 더 강력한 Mobile Drag Drop Polyfill로 교체 -->
+    <link rel="stylesheet" href="https://unpkg.com/mobile-drag-drop@2.3.0-rc.2/default.css">
+    <script src="https://unpkg.com/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+    <!-- 모바일 화면 끝으로 드래그 시 자동 스크롤 지원 스크립트 -->
+    <script src="https://unpkg.com/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
     
     <style>
         body {
@@ -65,8 +68,11 @@
         .draggable {
             cursor: grab;
             transition: transform 0.1s;
-            /* 모바일에서 아이템을 터치할 때 화면이 스크롤되는 것을 방지 */
-            touch-action: none;
+            /* 모바일 터치 설정 */
+            touch-action: none; /* 기본 스크롤 동작 방지 */
+            -webkit-touch-callout: none; /* iOS 롱터치 팝업 방지 */
+            -webkit-user-select: none; /* 모바일 텍스트/이미지 선택 방지 */
+            user-select: none;
         }
         .draggable:active {
             cursor: grabbing;
@@ -263,6 +269,19 @@
     </div>
 
     <script>
+        // === 모바일 드래그 앤 드롭 폴리필 설정 부분 ===
+        // 기존 HTML5 API를 터치 이벤트로 완벽히 맵핑시켜줍니다.
+        MobileDragDrop.polyfill({
+            // 스크롤과 드래그를 구분하기 위해 짧게(100ms) 누르고 있어야 드래그가 시작됩니다.
+            holdToDrag: 100, 
+            // 모바일 화면 끝으로 갈 때 자동으로 스크롤해주는 기능 활성화
+            dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+        });
+
+        // 특정 iOS Safari 버전에서 드래그 시 멈춤(스크롤 간섭) 현상을 막기 위한 설정
+        window.addEventListener('touchmove', function() {}, {passive: false});
+        // ===========================================
+
         // Lucide 아이콘 초기화
         lucide.createIcons();
 
