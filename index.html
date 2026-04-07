@@ -8,11 +8,8 @@
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- 모바일 호환성이 더 강력한 Mobile Drag Drop Polyfill로 교체 -->
-    <link rel="stylesheet" href="https://unpkg.com/mobile-drag-drop@2.3.0-rc.2/default.css">
-    <script src="https://unpkg.com/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
-    <!-- 모바일 화면 끝으로 드래그 시 자동 스크롤 지원 스크립트 -->
-    <script src="https://unpkg.com/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
+    <!-- 모바일/데스크탑 완벽 호환되는 SortableJS 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     
     <style>
         body {
@@ -64,33 +61,30 @@
             flex-direction: column;
         }
 
-        /* 드래그 앤 드롭 관련 스타일 */
+        /* 드래그 앤 드롭 아이템 기본 스타일 */
         .draggable {
             cursor: grab;
-            transition: transform 0.1s;
-            /* 모바일 터치 설정 */
-            touch-action: none; /* 기본 스크롤 동작 방지 */
-            -webkit-touch-callout: none; /* iOS 롱터치 팝업 방지 */
+            transition: transform 0.1s, box-shadow 0.1s;
             -webkit-user-select: none; /* 모바일 텍스트/이미지 선택 방지 */
             user-select: none;
-        }
-        .draggable:active {
-            cursor: grabbing;
-            transform: scale(1.05);
-        }
-        .dropzone {
-            transition: background-color 0.2s, outline 0.2s;
-        }
-        .dropzone.dragover {
-            background-color: rgba(255, 255, 255, 0.5);
-            outline: 2px dashed #4b5563;
+            /* 터치 액션을 허용하여 일반 스크롤이 가능하도록 유지 */
+            touch-action: manipulation;
         }
         
-        /* 빠른 배치 패널 전용 dragover 스타일 */
-        .quick-drop.dragover {
-            background-color: white !important;
-            transform: scale(1.1);
-            outline-width: 3px !important;
+        /* SortableJS 전용 스타일: 드래그 중인 원본 요소(자리표시자) */
+        .sortable-ghost {
+            opacity: 0.3;
+            background-color: #e5e7eb !important;
+            border: 2px dashed #9ca3af !important;
+        }
+        
+        /* SortableJS 전용 스타일: 떠있는(드래그 중인) 요소 */
+        .sortable-drag {
+            cursor: grabbing !important;
+            transform: scale(1.05) rotate(2deg);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            opacity: 1 !important;
+            z-index: 1000 !important;
         }
 
         .tier-label {
@@ -111,10 +105,10 @@
     <div class="fixed top-1/2 right-4 transform -translate-y-1/2 flex flex-col gap-3 bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl p-3 border border-gray-200 z-40 no-print transition-all hover:bg-white hidden md:flex">
         <div class="text-[11px] font-extrabold text-gray-500 text-center leading-tight">빠른<br>배치</div>
         <!-- data-target 속성을 이용해 드롭 시 실제 티어 영역으로 아이콘을 보냅니다 -->
-        <div class="w-14 h-14 bg-red-50 border-2 border-dashed border-red-200 hover:border-red-400 rounded-xl flex items-center justify-center font-black text-red-500 text-xl dropzone quick-drop transition-all" data-target="tier-god" ondrop="drop(event)" ondragover="allowDrop(event)" title="GOD 티어로 보내기">GOD</div>
-        <div class="w-14 h-14 bg-orange-50 border-2 border-dashed border-orange-200 hover:border-orange-400 rounded-xl flex items-center justify-center font-black text-orange-500 text-xl dropzone quick-drop transition-all" data-target="tier-a" ondrop="drop(event)" ondragover="allowDrop(event)" title="A 티어로 보내기">A</div>
-        <div class="w-14 h-14 bg-yellow-50 border-2 border-dashed border-yellow-200 hover:border-yellow-400 rounded-xl flex items-center justify-center font-black text-yellow-500 text-xl dropzone quick-drop transition-all" data-target="tier-b" ondrop="drop(event)" ondragover="allowDrop(event)" title="B 티어로 보내기">B</div>
-        <div class="w-14 h-14 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-gray-500 rounded-xl flex items-center justify-center font-black text-gray-500 text-xl dropzone quick-drop transition-all" data-target="tier-f" ondrop="drop(event)" ondragover="allowDrop(event)" title="F 티어로 보내기">F</div>
+        <div class="w-14 h-14 bg-red-50 border-2 border-dashed border-red-200 hover:border-red-400 rounded-xl flex items-center justify-center font-black text-red-500 text-xl dropzone quick-drop transition-all" data-target="tier-god" title="GOD 티어로 보내기">GOD</div>
+        <div class="w-14 h-14 bg-orange-50 border-2 border-dashed border-orange-200 hover:border-orange-400 rounded-xl flex items-center justify-center font-black text-orange-500 text-xl dropzone quick-drop transition-all" data-target="tier-a" title="A 티어로 보내기">A</div>
+        <div class="w-14 h-14 bg-yellow-50 border-2 border-dashed border-yellow-200 hover:border-yellow-400 rounded-xl flex items-center justify-center font-black text-yellow-500 text-xl dropzone quick-drop transition-all" data-target="tier-b" title="B 티어로 보내기">B</div>
+        <div class="w-14 h-14 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-gray-500 rounded-xl flex items-center justify-center font-black text-gray-500 text-xl dropzone quick-drop transition-all" data-target="tier-f" title="F 티어로 보내기">F</div>
     </div>
 
     <!-- A4 캔버스 영역 -->
@@ -156,7 +150,7 @@
                     <span class="text-2xl font-black tier-label">GOD</span>
                     <span class="text-[10px] text-center mt-1 font-medium leading-tight opacity-90 hidden sm:block">내 뇌의 일부<br>(없으면 연구 올스톱)</span>
                 </div>
-                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center min-h-[70px]" id="tier-god" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center min-h-[70px] content-start" id="tier-god"></div>
             </div>
 
             <!-- A Tier -->
@@ -165,7 +159,7 @@
                     <span class="text-2xl font-black tier-label">A</span>
                     <span class="text-[10px] text-center mt-1 font-medium leading-tight opacity-90 hidden sm:block">훌륭한 조교<br>(시간 단축에 큰 도움)</span>
                 </div>
-                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center min-h-[70px]" id="tier-a" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center min-h-[70px] content-start" id="tier-a"></div>
             </div>
 
             <!-- B Tier -->
@@ -174,7 +168,7 @@
                     <span class="text-2xl font-black">B</span>
                     <span class="text-[10px] text-center mt-1 font-medium leading-tight hidden sm:block">가끔 쓰는 알바생<br>(제한적 사용, 검수 필수)</span>
                 </div>
-                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center min-h-[70px]" id="tier-b" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center min-h-[70px] content-start" id="tier-b"></div>
             </div>
 
             <!-- F Tier -->
@@ -183,13 +177,13 @@
                     <span class="text-2xl font-black tier-label">F</span>
                     <span class="text-[10px] text-center mt-1 font-medium leading-tight opacity-90 hidden sm:block">차라리 내가 하지<br>(할루시네이션, 시간낭비)</span>
                 </div>
-                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center min-h-[70px]" id="tier-f" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                <div class="flex-grow p-3 flex flex-wrap gap-2 dropzone items-center min-h-[70px] content-start" id="tier-f"></div>
             </div>
 
         </div>
 
         <!-- 아이콘 보관함 (대기열) - 카테고리별 분류 -->
-        <div id="item-pool-container" class="mt-6 md:pr-12"> <!-- 빠른 배치 창과 겹치지 않게 우측 패딩 유지 -->
+        <div id="item-pool-container" class="mt-6 md:pr-12">
             <div class="text-sm font-bold text-gray-600 mb-3 flex items-center gap-1">
                 <i data-lucide="layout-grid" class="w-4 h-4"></i> 평가 대기중인 AI 도구 
                 <span class="text-xs font-normal text-gray-400 ml-2 hidden md:inline">(우측 '빠른 배치' 창으로 드래그하면 더 쉽습니다)</span>
@@ -199,43 +193,43 @@
                 <!-- 1. 글쓰기/작업 -->
                 <div>
                     <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="pen-tool" class="w-3 h-3"></i> 글쓰기 및 전반적인 작업</h3>
-                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-writing" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone content-start" id="pool-writing"></div>
                 </div>
 
                 <!-- 2. 연구/리서치 -->
                 <div>
                     <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="search" class="w-3 h-3"></i> 연구, 리서치 및 기록</h3>
-                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-research" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone content-start" id="pool-research"></div>
                 </div>
 
                 <!-- 3. 이미지/디자인/PPT -->
                 <div>
                     <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="image" class="w-3 h-3"></i> 이미지, 디자인 및 PPT</h3>
-                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-design" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone content-start" id="pool-design"></div>
                 </div>
 
                 <!-- 4. 영상/오디오 -->
                 <div>
                     <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="video" class="w-3 h-3"></i> 동영상 및 오디오</h3>
-                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-video" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone content-start" id="pool-video"></div>
                 </div>
 
                 <!-- 5. 3D 생성 -->
                 <div>
                     <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="box" class="w-3 h-3"></i> 3D 생성</h3>
-                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-3d" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone content-start" id="pool-3d"></div>
                 </div>
 
                 <!-- 6. 개발/노코드/자동화 -->
                 <div>
                     <h3 class="text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1"><i data-lucide="code" class="w-3 h-3"></i> 개발, 노코드 및 자동화</h3>
-                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-code" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone content-start" id="pool-code"></div>
                 </div>
 
                 <!-- 7. 사용자 추가 AI -->
                 <div id="custom-pool-section" class="md:col-span-2 hidden">
                     <h3 class="text-xs font-semibold text-indigo-500 mb-1 flex items-center gap-1"><i data-lucide="folder-plus" class="w-3 h-3"></i> 사용자 추가 AI</h3>
-                    <div class="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone" id="pool-custom" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                    <div class="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-lg p-3 min-h-[100px] flex flex-wrap gap-3 dropzone content-start" id="pool-custom"></div>
                 </div>
             </div>
             
@@ -269,19 +263,6 @@
     </div>
 
     <script>
-        // === 모바일 드래그 앤 드롭 폴리필 설정 부분 ===
-        // 기존 HTML5 API를 터치 이벤트로 완벽히 맵핑시켜줍니다.
-        MobileDragDrop.polyfill({
-            // 스크롤과 드래그를 구분하기 위해 짧게(100ms) 누르고 있어야 드래그가 시작됩니다.
-            holdToDrag: 100, 
-            // 모바일 화면 끝으로 갈 때 자동으로 스크롤해주는 기능 활성화
-            dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
-        });
-
-        // 특정 iOS Safari 버전에서 드래그 시 멈춤(스크롤 간섭) 현상을 막기 위한 설정
-        window.addEventListener('touchmove', function() {}, {passive: false});
-        // ===========================================
-
         // Lucide 아이콘 초기화
         lucide.createIcons();
 
@@ -367,8 +348,8 @@
             };
             
             document.querySelectorAll('.draggable').forEach(el => {
-                const parent = el.closest('.dropzone');
-                if (parent && parent.id && !parent.id.startsWith('quick-')) {
+                const parent = el.parentElement;
+                if (parent && parent.classList.contains('dropzone') && !parent.classList.contains('quick-drop')) {
                     state.positions[el.id] = parent.id;
                 }
             });
@@ -477,7 +458,7 @@
             }
         }
 
-        // 렌더링 및 드래그 앤 드롭 로직
+        // 아이템 생성 로직 (이제 HTML5 draggable 속성을 사용하지 않습니다)
         function renderItems() {
             aiTools.forEach(tool => {
                 const el = createItemElement(tool.id, tool.name, tool.color, tool.text, tool.icon);
@@ -489,9 +470,8 @@
         function createItemElement(id, name, bgColor, textColor, iconUrl) {
             const div = document.createElement('div');
             div.id = id;
-            div.className = `draggable flex flex-col items-center justify-center w-[72px] h-[72px] rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all flex-shrink-0 ${bgColor} ${textColor}`;
-            div.draggable = true;
-            div.addEventListener('dragstart', drag);
+            // SortableJS가 알아서 드래그를 처리하므로 기본 DOM 엘리먼트로 생성합니다
+            div.className = `draggable flex flex-col items-center justify-center w-[72px] h-[72px] rounded-2xl shadow-sm hover:shadow-md transition-all flex-shrink-0 ${bgColor} ${textColor}`;
 
             if (iconUrl) {
                 const img = document.createElement('img');
@@ -535,67 +515,52 @@
             }
         }
 
-        let draggedItem = null;
-
-        function drag(ev) {
-            draggedItem = ev.target;
-            ev.dataTransfer.setData("text", ev.target.id);
-            ev.target.style.opacity = '0.5';
-        }
-
-        document.addEventListener('dragend', function(ev) {
-            if (draggedItem) {
-                draggedItem.style.opacity = '1';
-                draggedItem = null;
-            }
-            document.querySelectorAll('.dropzone').forEach(zone => {
-                zone.classList.remove('dragover');
-            });
-        });
-
-        function allowDrop(ev) {
-            ev.preventDefault();
-            if(ev.target.classList.contains('dropzone')) {
-                ev.target.classList.add('dragover');
-            } else if (ev.target.closest('.dropzone')) {
-                ev.target.closest('.dropzone').classList.add('dragover');
-            }
-        }
-
-        function drop(ev) {
-            ev.preventDefault();
-            const data = ev.dataTransfer.getData("text");
-            const element = document.getElementById(data);
+        // ==========================================
+        // SortableJS 초기화 및 드래그 앤 드롭 로직
+        // ==========================================
+        function initSortable() {
+            const dropzones = document.querySelectorAll('.dropzone');
             
-            let targetZone = ev.target;
-            if (!targetZone.classList.contains('dropzone')) {
-                targetZone = targetZone.closest('.dropzone');
-            }
+            dropzones.forEach(zone => {
+                const isQuickDrop = zone.classList.contains('quick-drop');
+                
+                Sortable.create(zone, {
+                    group: 'ai-tools', // 모든 영역을 같은 그룹으로 묶어 상호 드래그 허용
+                    animation: 150, // 부드러운 위치 이동 애니메이션
+                    
+                    // 모바일 사용자 경험 최적화 (터치 스크롤과 구별)
+                    delay: 100, // 터치 시 0.1초 눌러야 드래그 시작
+                    delayOnTouchOnly: true, // 데스크탑 마우스는 딜레이 없이 즉시 시작
+                    touchStartThreshold: 3, // 손가락이 3px 이상 벗어나면 일반 스크롤로 간주
+                    
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
 
-            if (targetZone && targetZone.hasAttribute('data-target')) {
-                const actualTargetId = targetZone.getAttribute('data-target');
-                targetZone = document.getElementById(actualTargetId);
-            }
+                    // 드래그가 종료되었을 때 (일반적인 티어나 보관함 이동)
+                    onEnd: function (evt) {
+                        saveState(); // 상태 자동 저장
+                    },
 
-            if (targetZone && element) {
-                targetZone.appendChild(element);
-                saveState();
-            }
-
-            document.querySelectorAll('.dropzone').forEach(zone => {
-                zone.classList.remove('dragover');
+                    // 요소가 새로운 영역에 추가되었을 때 (빠른 배치 처리용)
+                    onAdd: function (evt) {
+                        if (isQuickDrop) {
+                            // 빠른 배치 영역으로 들어오면 data-target을 읽어 해당 티어로 즉시 순간이동 시킵니다
+                            const targetId = zone.getAttribute('data-target');
+                            const actualTarget = document.getElementById(targetId);
+                            if (actualTarget) {
+                                actualTarget.appendChild(evt.item);
+                                saveState();
+                            }
+                        }
+                    }
+                });
             });
         }
-
-        document.querySelectorAll('.dropzone').forEach(zone => {
-            zone.addEventListener('dragleave', function(ev) {
-                ev.target.classList.remove('dragover');
-            });
-        });
 
         window.onload = () => {
             renderItems();
             loadState();
+            initSortable(); // 아이템 렌더링 후 SortableJS 엔진 구동
         };
 
     </script>
