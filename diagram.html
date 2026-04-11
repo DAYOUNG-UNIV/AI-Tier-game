@@ -39,7 +39,7 @@
         .post-it:active, .post-it.dragging {
             cursor: grabbing;
             box-shadow: 5px 10px 20px rgba(0,0,0,0.25);
-            /* [버그 픽스] CSS의 transform이 JS의 translate 위치값을 덮어쓰는 문제 해결을 위해 아래 라인 삭제 */
+            /* CSS의 transform이 JS의 translate 위치값을 덮어쓰는 문제 해결을 위해 아래 라인 삭제 */
             z-index: 9999 !important; /* 드래그 시 항상 최상단 */
         }
 
@@ -78,20 +78,29 @@
         </button>
 
         <!-- 메뉴 패널 (기본적으로 접혀있음) -->
-        <div id="menu-panel" class="hidden flex-col gap-2 bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-xl border border-gray-200 min-w-[160px] panel-transition">
+        <div id="menu-panel" class="hidden flex-col gap-2 bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-xl border border-gray-200 min-w-[170px] panel-transition">
             <button onclick="arrangeGrid(); toggleMenu();" class="w-full px-3 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors border border-gray-200 shadow-sm flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                 전체 정렬
             </button>
-            <button onclick="arrangeByGroup(); toggleMenu();" class="w-full px-3 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors border border-gray-200 shadow-sm flex items-center gap-2.5">
+            <button onclick="arrangeByGroupVertical(); toggleMenu();" class="w-full px-3 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors border border-gray-200 shadow-sm flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V5m6 14V5M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                그룹 정렬
+                인사이트 정렬 (세로)
             </button>
+            <button onclick="arrangeByGroupHorizontal(); toggleMenu();" class="w-full px-3 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors border border-gray-200 shadow-sm flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                인사이트 정렬 (가로)
+            </button>
+            <hr class="border-gray-200 my-1">
+            <button onclick="arrangeByOriginalGroupHorizontal(); toggleMenu();" class="w-full px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-bold transition-colors border border-blue-200 shadow-sm flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                원본 그룹 정렬 (가로)
+            </button>
+            <hr class="border-gray-200 my-1">
             <button onclick="arrangeRandom(); toggleMenu();" class="w-full px-3 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors border border-gray-200 shadow-sm flex items-center gap-2.5">
                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                 랜덤 흩뿌리기
             </button>
-            <hr class="border-gray-200 my-1">
             <button onclick="undo(); toggleMenu();" class="w-full px-3 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors border border-gray-200 shadow-sm flex items-center gap-2.5" title="단축키: Ctrl+Z">
                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
                 실행 취소
@@ -133,63 +142,63 @@
     </main>
 
     <script>
-        // 어피니티 다이어그램 데이터 (Markdown에서 파싱)
+        // 어피니티 다이어그램 데이터 (Markdown에서 파싱 + Original Group 1~14 할당)
         const postItsData = [
             // Group 1 (Yellow)
-            { id: "14-A", group: 1, speaker: "P2", text: "결국 획기적이고 이전에 없었던 아이디어 자체는 사람이 만들어야 한다고 봐요. AI는 그 인간의 아이디어를 바탕으로 수많은 절차를 대신 실행해 주는 도구일 때 가장 이상적입니다.", keyword: "아이디어는 인간의 몫, AI는 완벽한 실행 도구" },
-            { id: "2-A", group: 1, speaker: "P2", text: "저는 코딩을 모르는 분야니까 전적으로 의지해요. 물리적인 매뉴얼부터 코드 구현, 트러블 슈팅까지 다 해줘요.", keyword: "비전문 분야 코딩/개발" },
-            { id: "3-A", group: 1, speaker: "P2", text: "AI 없이 개발은 상상하기 어려워요. 맨땅에 헤딩하면 그 시간 안에 절대 못하죠. 1인이서 다 가능하겠구나 느낍니다.", keyword: "1인 개발 가능, 시간 단축" },
-            { id: "2-E", group: 1, speaker: "P1", text: "40개 모델링부터 텍스처, 리토폴로지 최적화까지 너무 오래 걸리는데, AI 없이 할 때랑 시간적으로 엄청 큰 차이가 납니다.", keyword: "대량 작업 시간 단축" },
-            { id: "3-C", group: 1, speaker: "P1", text: "하루에 걸리는 양을 얘가 거의 10분 만에 해주니까 당연히 쓰겠죠. 생산 확률이 훨씬 높습니다.", keyword: "압도적인 속도" },
-            { id: "3-B", group: 1, speaker: "P1", text: "기획 시간 비용이 큰데, 잘못됐을 때 다시 만들어야 하는 리스크를 AI가 감안해 줍니다.", keyword: "시행착오/리스크 감소" },
-            { id: "2-B", group: 1, speaker: "P2", text: "개발할 때나 불필요한 절차(문서, 발표자료)를 빨리빨리 처리할 때 확실하게 도움을 받습니다. 정말 신세계예요.", keyword: "단순 업무 효율화, 문서 정리" },
-            { id: "2-C", group: 1, speaker: "P2", text: "아이디어는 제 경험에서 부딪혀서 나오는 거고, AI한테는 '내가 이런 아이디어가 있어, 괜찮은 이유 갖다 붙여줘'라고 근거를 찾게 합니다.", keyword: "아이디어 근거/논리 보강" },
-            { id: "1-A", group: 1, speaker: "P1", text: "여러 AI에 똑같은 이미지를 넣어봤는데 Tripo가 내 결과물과 가장 비슷하고 가성비도 제일 좋아서 선택했어요. 얘가 없으면 올해 졸업 못합니다.", keyword: "결과물 일치도, 가성비, 필수 불가결" },
-            { id: "1-C", group: 1, speaker: "P1", text: "기존 에셋은 제가 쓰기에 한계가 너무 커서, 직접 AI로 만드는 과정이 낫겠다고 생각했어요.", keyword: "기존 에셋의 한계" },
-            { id: "1-B", group: 1, speaker: "P1", text: "Meshy는 너무 디테일해서 오히려 영상용 같고 더러워 보이더라고요. 그래서 적정한 수준의 Tripo를 씁니다.", keyword: "적정 수준의 디테일" },
-            { id: "1-F", group: 1, speaker: "P1", text: "Gemini(나노 바나나)에서 크레딧 없이 이미지를 뽑고, 그걸 인풋으로 줘서 Tripo를 돌립니다.", keyword: "크레딧 절약, 툴 연계" },
-            { id: "3-D", group: 1, speaker: "P3", text: "아이디어 기획, 글쓰기, 검색, 바이브 코딩, 이미지 생성 등 모든 걸 맡기고 있고, AI 없이 했을 때는 상상하기 힘들어요.", keyword: "전방위적 의존성" },
-            { id: "6-A", group: 1, speaker: "P2", text: "제시한 결과가 구동이 되고 응용도 돼서 무한 신뢰였어요. 코드를 짤 때는 멀티 모달 AI를 써야 한다고 생각했죠.", keyword: "구동 결과에 따른 무한 신뢰" },
+            { id: "14-A", originalGroup: 14, group: 1, speaker: "P2", text: "결국 획기적이고 이전에 없었던 아이디어 자체는 사람이 만들어야 한다고 봐요. AI는 그 인간의 아이디어를 바탕으로 수많은 절차를 대신 실행해 주는 도구일 때 가장 이상적입니다.", keyword: "아이디어는 인간의 몫, AI는 완벽한 실행 도구" },
+            { id: "2-A", originalGroup: 2, group: 1, speaker: "P2", text: "저는 코딩을 모르는 분야니까 전적으로 의지해요. 물리적인 매뉴얼부터 코드 구현, 트러블 슈팅까지 다 해줘요.", keyword: "비전문 분야 코딩/개발" },
+            { id: "3-A", originalGroup: 3, group: 1, speaker: "P2", text: "AI 없이 개발은 상상하기 어려워요. 맨땅에 헤딩하면 그 시간 안에 절대 못하죠. 1인이서 다 가능하겠구나 느낍니다.", keyword: "1인 개발 가능, 시간 단축" },
+            { id: "2-E", originalGroup: 2, group: 1, speaker: "P1", text: "40개 모델링부터 텍스처, 리토폴로지 최적화까지 너무 오래 걸리는데, AI 없이 할 때랑 시간적으로 엄청 큰 차이가 납니다.", keyword: "대량 작업 시간 단축" },
+            { id: "3-C", originalGroup: 3, group: 1, speaker: "P1", text: "하루에 걸리는 양을 얘가 거의 10분 만에 해주니까 당연히 쓰겠죠. 생산 확률이 훨씬 높습니다.", keyword: "압도적인 속도" },
+            { id: "3-B", originalGroup: 3, group: 1, speaker: "P1", text: "기획 시간 비용이 큰데, 잘못됐을 때 다시 만들어야 하는 리스크를 AI가 감안해 줍니다.", keyword: "시행착오/리스크 감소" },
+            { id: "2-B", originalGroup: 2, group: 1, speaker: "P2", text: "개발할 때나 불필요한 절차(문서, 발표자료)를 빨리빨리 처리할 때 확실하게 도움을 받습니다. 정말 신세계예요.", keyword: "단순 업무 효율화, 문서 정리" },
+            { id: "2-C", originalGroup: 2, group: 1, speaker: "P2", text: "아이디어는 제 경험에서 부딪혀서 나오는 거고, AI한테는 '내가 이런 아이디어가 있어, 괜찮은 이유 갖다 붙여줘'라고 근거를 찾게 합니다.", keyword: "아이디어 근거/논리 보강" },
+            { id: "1-A", originalGroup: 1, group: 1, speaker: "P1", text: "여러 AI에 똑같은 이미지를 넣어봤는데 Tripo가 내 결과물과 가장 비슷하고 가성비도 제일 좋아서 선택했어요. 얘가 없으면 올해 졸업 못합니다.", keyword: "결과물 일치도, 가성비, 필수 불가결" },
+            { id: "1-C", originalGroup: 1, group: 1, speaker: "P1", text: "기존 에셋은 제가 쓰기에 한계가 너무 커서, 직접 AI로 만드는 과정이 낫겠다고 생각했어요.", keyword: "기존 에셋의 한계" },
+            { id: "1-B", originalGroup: 1, group: 1, speaker: "P1", text: "Meshy는 너무 디테일해서 오히려 영상용 같고 더러워 보이더라고요. 그래서 적정한 수준의 Tripo를 씁니다.", keyword: "적정 수준의 디테일" },
+            { id: "1-F", originalGroup: 1, group: 1, speaker: "P1", text: "Gemini(나노 바나나)에서 크레딧 없이 이미지를 뽑고, 그걸 인풋으로 줘서 Tripo를 돌립니다.", keyword: "크레딧 절약, 툴 연계" },
+            { id: "3-D", originalGroup: 3, group: 1, speaker: "P3", text: "아이디어 기획, 글쓰기, 검색, 바이브 코딩, 이미지 생성 등 모든 걸 맡기고 있고, AI 없이 했을 때는 상상하기 힘들어요.", keyword: "전방위적 의존성" },
+            { id: "6-A", originalGroup: 6, group: 1, speaker: "P2", text: "제시한 결과가 구동이 되고 응용도 돼서 무한 신뢰였어요. 코드를 짤 때는 멀티 모달 AI를 써야 한다고 생각했죠.", keyword: "구동 결과에 따른 무한 신뢰" },
             
             // Group 2 (Pink)
-            { id: "8-D", group: 2, speaker: "P3", text: "AI를 많이 쓸수록 할루시네이션과 계속 싸워야 하고, 심지어 AI의 '컨디션'까지 체크하게 돼요.", keyword: "할루시네이션과의 사투, 컨디션 체크" },
-            { id: "1-E", group: 2, speaker: "P3", text: "할루시네이션 방지와 교차 검증을 위해 GPT, Claude, Gemini 3개를 같이 씁니다. 코딩은 무조건 교차 검증해요.", keyword: "할루시네이션 대비, 교차 검증" },
-            { id: "1-D", group: 2, speaker: "P3", text: "Gemini한테 'GPT는 해주는데 왜 너는 못해' 하니까 글만 쓰던 애가 아무 말 없이 바로 플로우 차트를 만들어 주더라고요.", keyword: "타 툴과의 비교/경쟁 유도" },
-            { id: "4-A", group: 2, speaker: "P2", text: "Claude가 중간에 막히면 대화가 안 돼서, 프레임워크를 제 메모장에 따로 중간중간 저장하면서 씁니다.", keyword: "프레임워크 유지/저장" },
-            { id: "4-F", group: 2, speaker: "P2", text: "코딩 결과는 그냥 바로 쓸 수밖에 없어요. 그래서 내 프레임워크를 계속 잘 전달해서 주고받는 게 중요합니다.", keyword: "프롬프트 전달의 중요성" },
-            { id: "4-B", group: 2, speaker: "P3", text: "Gemini가 해결 못하고 '산으로 갈 때'가 있어요. 그럼 딱 느낌이 와서 싹 비우고 새로 시작하거나 GPT, Claude로 넘어갑니다.", keyword: "맥락 이탈 시 리셋/툴 전환" },
-            { id: "2-D", group: 2, speaker: "P3", text: "작업 맥락이 여러 개라 하나의 파일 안에서만 작업하는 느낌으로 분류하고 싶고, 자동화할 수 있는 부분에 활용합니다.", keyword: "작업 맥락 분류, 자동화" },
-            { id: "7-D", group: 2, speaker: "P2", text: "가끔 '~~다/체로 끝나라고 지시받았습니다'처럼 자기 입력값(지시문)을 그대로 내뱉는 어이없는 할루시네이션이 발생하기도 해요.", keyword: "시스템 프롬프트 노출" },
-            { id: "7-C", group: 2, speaker: "P3", text: "Gemini가 코드를 살짝 이상하게 짤 때가 있는데, 교수님조차 '네 잘못이 아니라 제미나이가 잘못했다'고 하실 정도예요.", keyword: "코드 생성 오류, 책임 소재" },
-            { id: "7-A", group: 2, speaker: "P2", text: "Claude는 대화량 초과로 끊길 거면 미리 말해주지 갑자기 전부 끝나버려서 UI상 대응하기가 불편했어요.", keyword: "대화량 제한 UI/UX 문제" },
-            { id: "7-B", group: 2, speaker: "P2", text: "ChatGPT는 한계가 와도 칭찬만 하고, 영상 AI는 거부 없이 무조건 생성해 버려요. 결과가 안 나오면 실망해서 아예 안 쓰게 되죠.", keyword: "맹목적 생성, 과장 광고 및 비용 낭비" },
-            { id: "5-B", group: 2, speaker: "P2", text: "아이디어는 무조건 내가 짜야 합니다. 얘는 내가 주문한 단서의 요건만 충족하는 답을 내놓을 뿐이에요.", keyword: "수동적인 답변" },
-            { id: "5-A", group: 2, speaker: "P2", text: "기획적인 아이디어에는 AI가 도움이 안 돼요. 허공 속의 현실감 없는 아이디어만 계속 내서 영감을 얻은 적이 없어요.", keyword: "창의성/현실감 부족" },
-            { id: "5-D", group: 2, speaker: "P1", text: "누가 떡볶이를 먹다가 찍고 먹다가 찍겠어요. 그런 데이터(한식 특화)가 없어서 한계가 있습니다.", keyword: "로컬/특정 데이터 부족" },
-            { id: "5-C", group: 2, speaker: "P1", text: "기존 에셋이 없을 뿐만 아니라, 여러 음식의 무드(다크함, 리얼함 등)를 다 똑같이 맞추는 것에 한계가 있어요.", keyword: "일관된 무드 조성의 어려움" },
-            { id: "4-C", group: 2, speaker: "P1", text: "AI가 똑같은 그릇의 텍스처(매트함, 반짝임 등)를 구분 못 할 때가 있어서, 그 정도는 제가 수정하는 게 더 생산적입니다.", keyword: "디테일한 텍스처 수작업 수정" },
-            { id: "4-D", group: 2, speaker: "P1", text: "결과물을 그대로 안 쓰고 블렌더나 마야에 불러와서 리토폴로지나 메시 재구성, 텍스처 수정 단계를 거칩니다.", keyword: "타 3D 툴 연계 후가공" },
-            { id: "4-E", group: 2, speaker: "P1", text: "완벽한 3D 툴이라 전적으로 믿지만 텍스처 수정은 필요해요. 근데 과정이 불편하지 않아서 감안하고 쓸 정도입니다.", keyword: "후가공의 수용성" },
+            { id: "8-D", originalGroup: 8, group: 2, speaker: "P3", text: "AI를 많이 쓸수록 할루시네이션과 계속 싸워야 하고, 심지어 AI의 '컨디션'까지 체크하게 돼요.", keyword: "할루시네이션과의 사투, 컨디션 체크" },
+            { id: "1-E", originalGroup: 1, group: 2, speaker: "P3", text: "할루시네이션 방지와 교차 검증을 위해 GPT, Claude, Gemini 3개를 같이 씁니다. 코딩은 무조건 교차 검증해요.", keyword: "할루시네이션 대비, 교차 검증" },
+            { id: "1-D", originalGroup: 1, group: 2, speaker: "P3", text: "Gemini한테 'GPT는 해주는데 왜 너는 못해' 하니까 글만 쓰던 애가 아무 말 없이 바로 플로우 차트를 만들어 주더라고요.", keyword: "타 툴과의 비교/경쟁 유도" },
+            { id: "4-A", originalGroup: 4, group: 2, speaker: "P2", text: "Claude가 중간에 막히면 대화가 안 돼서, 프레임워크를 제 메모장에 따로 중간중간 저장하면서 씁니다.", keyword: "프레임워크 유지/저장" },
+            { id: "4-F", originalGroup: 4, group: 2, speaker: "P2", text: "코딩 결과는 그냥 바로 쓸 수밖에 없어요. 그래서 내 프레임워크를 계속 잘 전달해서 주고받는 게 중요합니다.", keyword: "프롬프트 전달의 중요성" },
+            { id: "4-B", originalGroup: 4, group: 2, speaker: "P3", text: "Gemini가 해결 못하고 '산으로 갈 때'가 있어요. 그럼 딱 느낌이 와서 싹 비우고 새로 시작하거나 GPT, Claude로 넘어갑니다.", keyword: "맥락 이탈 시 리셋/툴 전환" },
+            { id: "2-D", originalGroup: 2, group: 2, speaker: "P3", text: "작업 맥락이 여러 개라 하나의 파일 안에서만 작업하는 느낌으로 분류하고 싶고, 자동화할 수 있는 부분에 활용합니다.", keyword: "작업 맥락 분류, 자동화" },
+            { id: "7-D", originalGroup: 7, group: 2, speaker: "P2", text: "가끔 '~~다/체로 끝나라고 지시받았습니다'처럼 자기 입력값(지시문)을 그대로 내뱉는 어이없는 할루시네이션이 발생하기도 해요.", keyword: "시스템 프롬프트 노출" },
+            { id: "7-C", originalGroup: 7, group: 2, speaker: "P3", text: "Gemini가 코드를 살짝 이상하게 짤 때가 있는데, 교수님조차 '네 잘못이 아니라 제미나이가 잘못했다'고 하실 정도예요.", keyword: "코드 생성 오류, 책임 소재" },
+            { id: "7-A", originalGroup: 7, group: 2, speaker: "P2", text: "Claude는 대화량 초과로 끊길 거면 미리 말해주지 갑자기 전부 끝나버려서 UI상 대응하기가 불편했어요.", keyword: "대화량 제한 UI/UX 문제" },
+            { id: "7-B", originalGroup: 7, group: 2, speaker: "P2", text: "ChatGPT는 한계가 와도 칭찬만 하고, 영상 AI는 거부 없이 무조건 생성해 버려요. 결과가 안 나오면 실망해서 아예 안 쓰게 되죠.", keyword: "맹목적 생성, 과장 광고 및 비용 낭비" },
+            { id: "5-B", originalGroup: 5, group: 2, speaker: "P2", text: "아이디어는 무조건 내가 짜야 합니다. 얘는 내가 주문한 단서의 요건만 충족하는 답을 내놓을 뿐이에요.", keyword: "수동적인 답변" },
+            { id: "5-A", originalGroup: 5, group: 2, speaker: "P2", text: "기획적인 아이디어에는 AI가 도움이 안 돼요. 허공 속의 현실감 없는 아이디어만 계속 내서 영감을 얻은 적이 없어요.", keyword: "창의성/현실감 부족" },
+            { id: "5-D", originalGroup: 5, group: 2, speaker: "P1", text: "누가 떡볶이를 먹다가 찍고 먹다가 찍겠어요. 그런 데이터(한식 특화)가 없어서 한계가 있습니다.", keyword: "로컬/특정 데이터 부족" },
+            { id: "5-C", originalGroup: 5, group: 2, speaker: "P1", text: "기존 에셋이 없을 뿐만 아니라, 여러 음식의 무드(다크함, 리얼함 등)를 다 똑같이 맞추는 것에 한계가 있어요.", keyword: "일관된 무드 조성의 어려움" },
+            { id: "4-C", originalGroup: 4, group: 2, speaker: "P1", text: "AI가 똑같은 그릇의 텍스처(매트함, 반짝임 등)를 구분 못 할 때가 있어서, 그 정도는 제가 수정하는 게 더 생산적입니다.", keyword: "디테일한 텍스처 수작업 수정" },
+            { id: "4-D", originalGroup: 4, group: 2, speaker: "P1", text: "결과물을 그대로 안 쓰고 블렌더나 마야에 불러와서 리토폴로지나 메시 재구성, 텍스처 수정 단계를 거칩니다.", keyword: "타 3D 툴 연계 후가공" },
+            { id: "4-E", originalGroup: 4, group: 2, speaker: "P1", text: "완벽한 3D 툴이라 전적으로 믿지만 텍스처 수정은 필요해요. 근데 과정이 불편하지 않아서 감안하고 쓸 정도입니다.", keyword: "후가공의 수용성" },
 
             // Group 3 (Blue)
-            { id: "9-A", group: 3, speaker: "P2", text: "코드를 모르는 상태에서 바이브 코딩으로 결과물을 내니까, '내가 정말 이걸 한다고 할 수 있을까' 하는 죄의식과 걱정이 컸어요.", keyword: "역량에 대한 회의감, 죄의식" },
-            { id: "9-B", group: 3, speaker: "P1", text: "아이디어에 AI가 선제적으로 개입해버리면 온전히 '나의 것'이 없어질 것 같다는 생각이 너무 커서 아이디어 제안용으로는 잘 안 써요.", keyword: "오리지널리티 상실, 주체성 침해 방어" },
-            { id: "8-B", group: 3, speaker: "P3", text: "연구에서 할루시네이션은 사람을 진짜 바보로 만들 수 있는 위험성이 있어서, 책임감을 가지고 활용해야 합니다.", keyword: "연구 위험성, 사용자 책임감" },
-            { id: "8-A", group: 3, speaker: "P1", text: "AI로 뮤직비디오를 만들었을 때 아이들 얼굴이 그대로 나와서 초상권 문제가 될 뻔했어요. 윤리적 검증 단계가 꼭 필요해요.", keyword: "초상권/저작권 침해 위험, 검증 필요성" },
-            { id: "8-C", group: 3, speaker: "P2", text: "사주는 재미로라도 보는데, AI가 말하면 왠지 근거도 없는 얘기 같다는 느낌이 들어요.", keyword: "정보의 근거/신뢰 부족" },
-            { id: "6-B", group: 3, speaker: "P3", text: "제가 주로 AI한테 가장 바라는 거는 거짓 없이 모든 사실을 말해야 한다는 겁니다.", keyword: "사실 기반의 정보 요구" },
-            { id: "10-A", group: 3, speaker: "P2", text: "슬랙을 학습시켰더니 대답만 하고 일을 미루는 사람의 단점까지 배웠잖아요. 인간적인 요소를 넣는 게 진짜 도움이 되는지 딜레마가 있습니다.", keyword: "인간화의 딜레마, 감정 요소 학습 역효과" },
-            { id: "10-B", group: 3, speaker: "P2", text: "AI가 감정적인 어투를 쓰면, 자기가 답을 못 찾은 걸 땜빵하려고 그러는 것 같아서 오히려 더 걱정돼요.", keyword: "감정적 어투의 불신" },
+            { id: "9-A", originalGroup: 9, group: 3, speaker: "P2", text: "코드를 모르는 상태에서 바이브 코딩으로 결과물을 내니까, '내가 정말 이걸 한다고 할 수 있을까' 하는 죄의식과 걱정이 컸어요.", keyword: "역량에 대한 회의감, 죄의식" },
+            { id: "9-B", originalGroup: 9, group: 3, speaker: "P1", text: "아이디어에 AI가 선제적으로 개입해버리면 온전히 '나의 것'이 없어질 것 같다는 생각이 너무 커서 아이디어 제안용으로는 잘 안 써요.", keyword: "오리지널리티 상실, 주체성 침해 방어" },
+            { id: "8-B", originalGroup: 8, group: 3, speaker: "P3", text: "연구에서 할루시네이션은 사람을 진짜 바보로 만들 수 있는 위험성이 있어서, 책임감을 가지고 활용해야 합니다.", keyword: "연구 위험성, 사용자 책임감" },
+            { id: "8-A", originalGroup: 8, group: 3, speaker: "P1", text: "AI로 뮤직비디오를 만들었을 때 아이들 얼굴이 그대로 나와서 초상권 문제가 될 뻔했어요. 윤리적 검증 단계가 꼭 필요해요.", keyword: "초상권/저작권 침해 위험, 검증 필요성" },
+            { id: "8-C", originalGroup: 8, group: 3, speaker: "P2", text: "사주는 재미로라도 보는데, AI가 말하면 왠지 근거도 없는 얘기 같다는 느낌이 들어요.", keyword: "정보의 근거/신뢰 부족" },
+            { id: "6-B", originalGroup: 6, group: 3, speaker: "P3", text: "제가 주로 AI한테 가장 바라는 거는 거짓 없이 모든 사실을 말해야 한다는 겁니다.", keyword: "사실 기반의 정보 요구" },
+            { id: "10-A", originalGroup: 10, group: 3, speaker: "P2", text: "슬랙을 학습시켰더니 대답만 하고 일을 미루는 사람의 단점까지 배웠잖아요. 인간적인 요소를 넣는 게 진짜 도움이 되는지 딜레마가 있습니다.", keyword: "인간화의 딜레마, 감정 요소 학습 역효과" },
+            { id: "10-B", originalGroup: 10, group: 3, speaker: "P2", text: "AI가 감정적인 어투를 쓰면, 자기가 답을 못 찾은 걸 땜빵하려고 그러는 것 같아서 오히려 더 걱정돼요.", keyword: "감정적 어투의 불신" },
 
             // Group 4 (Green)
-            { id: "11-A", group: 4, speaker: "P1", text: "선제적으로 개입하면 제 생각이 끌려가서 온전한 주체성을 잃게 되므로, 딱 요구했을 때만 객관적으로 말해줬으면 좋겠습니다.", keyword: "수동적 보조, 온디맨드 개입" },
-            { id: "11-B", group: 4, speaker: "P1", text: "전체적으로 아우르기보다는 선행 연구 탐색이나 요약처럼 제가 명확하게 하라고 지시한 포커스된 기능만 빠르고 정확하게 수행해 주길 바랍니다.", keyword: "명확한 역할 한정, 포커스 기능" },
-            { id: "13-A", group: 4, speaker: "P1", text: "여기저기 흩어져 있는 방대한 선행 연구를 먼저 요약해 줘서, 마음에 드는 것만 골라 읽으며 시간을 줄일 수 있는 기능이 가장 필요합니다.", keyword: "선행 연구 요약 큐레이션" },
-            { id: "12-A", group: 4, speaker: "P3", text: "저에게 이상적인 AI는 제 뇌와 똑같지만 성능은 훨씬 더 좋은 '제 복제본'입니다. 제 생각과 방향을 미리 다 예상하고 맞춰주길 바라요.", keyword: "뇌의 복제본, 의도 예측" },
-            { id: "12-B", group: 4, speaker: "P3", text: "불필요한 정보를 더하기보다 빼는 작업이 중요해요. 제가 원하는 방향대로 결과가 나오지 않는 할루시네이션을 줄여야 합니다.", keyword: "불필요한 정보 제거" },
-            { id: "12-C", group: 4, speaker: "P3", text: "관심 있는 연구 주제를 다 읽고 번역해서 가르칠 준비가 완벽하게 되어 있는, '지도 교수님보다 더 업그레이드된 레벨'이 가장 이상적이에요.", keyword: "지도 교수급 어시스턴트" },
-            { id: "13-B", group: 4, speaker: "P2", text: "아이디어만 사람이 내면, 가장 어려운 검증 단계를 포함한 나머지 모든 연구 절차를 AI가 알아서 싹 다 처리해 주는 시스템이 있었으면 좋겠어요.", keyword: "연구 절차의 전면 자동화" },
-            { id: "13-C", group: 4, speaker: "P2", text: "비용과 시간이 너무 많이 드는 방대한 리서치 작업을, 인간이 할 수 없는 다른 차원의 기계적이고 획기적인 알고리즘으로 해결해 주길 바랍니다.", keyword: "초인적 데이터 처리 알고리즘" }
+            { id: "11-A", originalGroup: 11, group: 4, speaker: "P1", text: "선제적으로 개입하면 제 생각이 끌려가서 온전한 주체성을 잃게 되므로, 딱 요구했을 때만 객관적으로 말해줬으면 좋겠습니다.", keyword: "수동적 보조, 온디맨드 개입" },
+            { id: "11-B", originalGroup: 11, group: 4, speaker: "P1", text: "전체적으로 아우르기보다는 선행 연구 탐색이나 요약처럼 제가 명확하게 하라고 지시한 포커스된 기능만 빠르고 정확하게 수행해 주길 바랍니다.", keyword: "명확한 역할 한정, 포커스 기능" },
+            { id: "13-A", originalGroup: 13, group: 4, speaker: "P1", text: "여기저기 흩어져 있는 방대한 선행 연구를 먼저 요약해 줘서, 마음에 드는 것만 골라 읽으며 시간을 줄일 수 있는 기능이 가장 필요합니다.", keyword: "선행 연구 요약 큐레이션" },
+            { id: "12-A", originalGroup: 12, group: 4, speaker: "P3", text: "저에게 이상적인 AI는 제 뇌와 똑같지만 성능은 훨씬 더 좋은 '제 복제본'입니다. 제 생각과 방향을 미리 다 예상하고 맞춰주길 바라요.", keyword: "뇌의 복제본, 의도 예측" },
+            { id: "12-B", originalGroup: 12, group: 4, speaker: "P3", text: "불필요한 정보를 더하기보다 빼는 작업이 중요해요. 제가 원하는 방향대로 결과가 나오지 않는 할루시네이션을 줄여야 합니다.", keyword: "불필요한 정보 제거" },
+            { id: "12-C", originalGroup: 12, group: 4, speaker: "P3", text: "관심 있는 연구 주제를 다 읽고 번역해서 가르칠 준비가 완벽하게 되어 있는, '지도 교수님보다 더 업그레이드된 레벨'이 가장 이상적이에요.", keyword: "지도 교수급 어시스턴트" },
+            { id: "13-B", originalGroup: 13, group: 4, speaker: "P2", text: "아이디어만 사람이 내면, 가장 어려운 검증 단계를 포함한 나머지 모든 연구 절차를 AI가 알아서 싹 다 처리해 주는 시스템이 있었으면 좋겠어요.", keyword: "연구 절차의 전면 자동화" },
+            { id: "13-C", originalGroup: 13, group: 4, speaker: "P2", text: "비용과 시간이 너무 많이 드는 방대한 리서치 작업을, 인간이 할 수 없는 다른 차원의 기계적이고 획기적인 알고리즘으로 해결해 주길 바랍니다.", keyword: "초인적 데이터 처리 알고리즘" }
         ];
 
         // 그룹별 색상 매핑
@@ -200,19 +209,39 @@
             4: "bg-green-200 border-green-300 text-green-900"
         };
 
-        const groupTitles = {
+        const insightGroupTitles = {
             1: "도구에서 '필수 동료'로",
             2: "보이지 않는 비용 (검증/통제)",
             3: "주체성 위협과 인간화 딜레마",
             4: "이상적인 에이전트 설계"
         };
 
+        const originalGroupTitles = {
+            1: "AI Tool Selection Criteria",
+            2: "Specific AI Tool Applications",
+            3: "Impact on Research Productivity",
+            4: "AI Output Refinement and Verification",
+            5: "Limitations and Challenges of AI",
+            6: "Trust and Reliability in AI",
+            7: "AI Output Quality & Usability Issues",
+            8: "Ethical and Trust Concerns",
+            9: "Loss of Human Agency and Originality",
+            10: "AI's Non-human Characteristics",
+            11: "AI Intervention Level and Autonomy",
+            12: "AI as a Personalized Cognitive Extension",
+            13: "Specific Desired AI Functions for Research",
+            14: "AI's Role in Idea Generation"
+        };
+
         const board = document.getElementById('board');
         const canvasArea = document.getElementById('canvas-area');
         let zIndexCounter = 10;
         let postItElements = [];
-        let groupHeaderElements = []; // 그룹 타이틀 엘리먼트 배열
-        let isGroupSortActive = false; // 현재 그룹 정렬 상태인지 확인
+        let insightHeaderElements = []; // 인사이트 그룹 타이틀 엘리먼트 배열
+        let originalHeaderElements = []; // 원본 그룹 타이틀 엘리먼트 배열
+        
+        // 정렬 모드 상태 ('vertical' | 'horizontal' | 'original_horizontal' | null)
+        let groupSortDirection = null; 
 
         // 드래그 상태 관리 변수
         let activeItem = null;
@@ -265,7 +294,7 @@
                     rotation: parseFloat(el.dataset.rotation) || 0
                 };
             });
-            return { positions, isGroupSortActive };
+            return { positions, groupSortDirection };
         }
 
         // 히스토리 스택에 상태 저장 (최대 50개)
@@ -291,21 +320,49 @@
                 }
             });
             
-            // 헤더 가시성 복구
-            isGroupSortActive = previousState.isGroupSortActive || false;
+            // 헤더 가시성 복구 (하위 호환성 체크)
+            if (previousState.groupSortDirection !== undefined) {
+                groupSortDirection = previousState.groupSortDirection;
+            } else if (previousState.isGroupSortActive) {
+                groupSortDirection = 'vertical';
+            } else {
+                groupSortDirection = null;
+            }
+            
             updateHeaderVisibility();
-
             savePositions(); // 되돌린 상태도 로컬 스토리지에 동기화
         }
 
         // 그룹 헤더 표시 업데이트 로직
         function updateHeaderVisibility() {
-            groupHeaderElements.forEach((el, index) => {
-                if (isGroupSortActive) {
+            // 인사이트 그룹(4개) 타이틀 업데이트
+            insightHeaderElements.forEach((el, index) => {
+                if (groupSortDirection === 'vertical') {
                     const paddingX = 40;
                     const colSpacing = 320;
                     const x = paddingX + (index * colSpacing);
                     const y = 90; // 상단 메뉴/타이틀과 겹치지 않도록 Y축 여백 조정
+                    el.style.transform = `translate(${x}px, ${y}px)`;
+                    el.style.opacity = '1';
+                } else if (groupSortDirection === 'horizontal') {
+                    const paddingX = 40;
+                    const rowSpacing = 320; // 가로 정렬 시 세로 간격
+                    const x = paddingX;
+                    const y = 90 + (index * rowSpacing);
+                    el.style.transform = `translate(${x}px, ${y}px)`;
+                    el.style.opacity = '1';
+                } else {
+                    el.style.opacity = '0';
+                }
+            });
+
+            // 원본 그룹(14개) 타이틀 업데이트
+            originalHeaderElements.forEach((el, index) => {
+                if (groupSortDirection === 'original_horizontal') {
+                    const paddingX = 40;
+                    const rowSpacing = 280; // 아이템이 많아 세로 간격을 살짝 줄임
+                    const x = paddingX;
+                    const y = 90 + (index * rowSpacing);
                     el.style.transform = `translate(${x}px, ${y}px)`;
                     el.style.opacity = '1';
                 } else {
@@ -318,7 +375,8 @@
         function createPostIts() {
             canvasArea.innerHTML = '';
             postItElements = [];
-            groupHeaderElements = [];
+            insightHeaderElements = [];
+            originalHeaderElements = [];
 
             // 로컬 스토리지에서 저장된 위치 데이터 불러오기
             const savedPositionsStr = localStorage.getItem('affinityBoardPositions');
@@ -328,27 +386,45 @@
                     const parsed = JSON.parse(savedPositionsStr);
                     if (parsed.positions) {
                         savedPositions = parsed.positions;
-                        isGroupSortActive = parsed.isGroupSortActive || false;
+                        if (parsed.groupSortDirection !== undefined) {
+                            groupSortDirection = parsed.groupSortDirection;
+                        } else if (parsed.isGroupSortActive) {
+                            groupSortDirection = 'vertical'; // 기존 호환성
+                        } else {
+                            groupSortDirection = null;
+                        }
                     } else {
                         savedPositions = parsed; // 하위 호환성 보장
-                        isGroupSortActive = false;
+                        groupSortDirection = null;
                     }
                 } catch(e) {
                     console.error("로컬 스토리지 파싱 에러", e);
                 }
             }
 
-            // 1. 캔버스 영역에 그룹 타이틀(헤더) 엘리먼트 먼저 렌더링
+            // 1. 인사이트 그룹 헤더 엘리먼트 렌더링 (4개)
             for (let i = 1; i <= 4; i++) {
                 const el = document.createElement('div');
-                const borderColorClass = groupColors[i].split(' ')[1]; // 해당 그룹의 border 색상 가져오기
+                const borderColorClass = groupColors[i].split(' ')[1];
                 el.className = `absolute w-[280px] p-3 rounded-xl border-2 bg-white/90 backdrop-blur-sm shadow-sm transition-all duration-300 pointer-events-none z-0 opacity-0 ${borderColorClass}`;
                 el.innerHTML = `
-                    <div class="text-[11px] font-bold text-gray-500 mb-0.5 tracking-wide">GROUP ${i}</div>
-                    <div class="text-[15px] font-bold text-gray-800 leading-tight">${groupTitles[i]}</div>
+                    <div class="text-[11px] font-bold text-gray-500 mb-0.5 tracking-wide">INSIGHT GROUP ${i}</div>
+                    <div class="text-[15px] font-bold text-gray-800 leading-tight">${insightGroupTitles[i]}</div>
                 `;
                 canvasArea.appendChild(el);
-                groupHeaderElements.push(el);
+                insightHeaderElements.push(el);
+            }
+
+            // 2. 원본 그룹 헤더 엘리먼트 렌더링 (14개)
+            for (let i = 1; i <= 14; i++) {
+                const el = document.createElement('div');
+                el.className = `absolute w-[280px] p-3 rounded-xl border-2 bg-gray-100/90 backdrop-blur-sm shadow-sm transition-all duration-300 pointer-events-none z-0 opacity-0 border-gray-300`;
+                el.innerHTML = `
+                    <div class="text-[11px] font-bold text-gray-500 mb-0.5 tracking-wide">ORIGINAL GROUP ${i}</div>
+                    <div class="text-[14px] font-bold text-gray-800 leading-tight">${originalGroupTitles[i]}</div>
+                `;
+                canvasArea.appendChild(el);
+                originalHeaderElements.push(el);
             }
 
             postItsData.forEach((data, index) => {
@@ -365,7 +441,7 @@
                             <span class="text-xs font-bold bg-black/5 px-1.5 py-0.5 rounded">[${data.id}]</span>
                             <span class="text-[10px] font-bold text-white bg-gray-700 px-1.5 py-0.5 rounded-full">${data.speaker}</span>
                         </div>
-                        <span class="text-[10px] font-semibold opacity-70">G${data.group}</span>
+                        <span class="text-[10px] font-semibold opacity-70" title="원본 그룹: ${data.originalGroup}">G${data.group}</span>
                     </div>
                     <p class="text-sm leading-relaxed font-medium mb-3">"${data.text}"</p>
                     <div class="text-xs font-bold text-black/60 bg-white/40 px-2 py-1 rounded inline-block">
@@ -411,7 +487,7 @@
             });
             const dataToSave = {
                 positions: positions,
-                isGroupSortActive: isGroupSortActive
+                groupSortDirection: groupSortDirection
             };
             localStorage.setItem('affinityBoardPositions', JSON.stringify(dataToSave));
         }
@@ -429,7 +505,7 @@
         function arrangeGrid(skipHistory = false) {
             if (!skipHistory) saveStateToHistory(getCurrentState()); // 정렬 직전 상태 저장
 
-            isGroupSortActive = false; // 그리드 정렬 시 타이틀 숨김
+            groupSortDirection = null; // 그리드 정렬 시 타이틀 숨김
             updateHeaderVisibility();
 
             const paddingX = 40;
@@ -441,7 +517,7 @@
             const viewportWidth = window.innerWidth;
             const columns = Math.max(3, Math.floor((viewportWidth - paddingX * 2) / postItWidth));
             
-            // 그룹별로 정렬하여 배치
+            // 포스트잇들을 원래 데이터 순서(또는 ID 등)로 다시 정렬하여 배치 (랜덤하게 섞였을 수 있으므로)
             let sortedElements = [...postItElements].sort((a, b) => {
                 const groupA = postItsData[postItElements.indexOf(a)].group;
                 const groupB = postItsData[postItElements.indexOf(b)].group;
@@ -468,15 +544,15 @@
             savePositions(); // 정렬 후 저장
         }
 
-        // 그룹별로 좌우 분리(컬럼) 정렬
-        function arrangeByGroup(skipHistory = false) {
+        // 인사이트 그룹별로 좌우 분리(컬럼) 정렬 (세로)
+        function arrangeByGroupVertical(skipHistory = false) {
             if (!skipHistory) saveStateToHistory(getCurrentState()); // 정렬 직전 상태 저장
 
-            isGroupSortActive = true; // 그룹 정렬 시 타이틀 노출
+            groupSortDirection = 'vertical'; // 세로 그룹 정렬 시 타이틀 노출
             updateHeaderVisibility();
 
             const paddingX = 40;
-            const paddingY = 180; // 타이틀 표시 및 플로팅 메뉴 공간 확보를 위해 넉넉히 내림
+            const paddingY = 180; // 타이틀 표시 공간 확보를 위해 내림
             const colSpacing = 320; // 그룹 간 좌우 간격
             const postItHeight = 220;
             
@@ -507,11 +583,90 @@
             savePositions();
         }
 
+        // 인사이트 그룹별로 상하 분리(로우) 정렬 (가로)
+        function arrangeByGroupHorizontal(skipHistory = false) {
+            if (!skipHistory) saveStateToHistory(getCurrentState()); // 정렬 직전 상태 저장
+
+            groupSortDirection = 'horizontal'; // 가로 그룹 정렬 시 타이틀 노출
+            updateHeaderVisibility();
+
+            const paddingX = 40;
+            const rowSpacing = 320; // 각 그룹별 세로 간격
+            const colSpacing = 320; // 그룹 내 포스트잇들의 가로 간격
+            
+            // 각 그룹별로 몇 번째 아이템인지 카운트하기 위한 객체
+            let groupCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+            postItElements.forEach(el => {
+                const dataId = el.dataset.id;
+                const data = postItsData.find(d => d.id === dataId);
+                const groupNum = data ? data.group : 1;
+                
+                const row = groupNum - 1; // 0, 1, 2, 3
+                const col = groupCounts[groupNum]; // 0, 1, 2, 3...
+                
+                // 가로 정렬의 경우 타이틀 우측으로 포스트잇이 나열됨
+                // 타이틀의 width가 280px이므로 첫 번째 포스트잇은 280 + 여백 만큼 우측에서 시작
+                const x = paddingX + 320 + (col * colSpacing); 
+                const y = 90 + (row * rowSpacing); // 타이틀 Y값과 동일 선상에 배치
+                
+                const rotation = (Math.random() - 0.5) * 4; 
+                
+                el.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+                
+                el.dataset.x = x;
+                el.dataset.y = y;
+                el.dataset.rotation = rotation;
+
+                groupCounts[groupNum]++;
+            });
+            savePositions();
+        }
+
+        // 원본 그룹(1~14) 기준으로 상하 분리 정렬 (가로)
+        function arrangeByOriginalGroupHorizontal(skipHistory = false) {
+            if (!skipHistory) saveStateToHistory(getCurrentState()); 
+
+            groupSortDirection = 'original_horizontal'; // 원본 가로 정렬
+            updateHeaderVisibility();
+
+            const paddingX = 40;
+            const rowSpacing = 280; // 14개나 되므로 세로 간격을 약간 좁힘
+            const colSpacing = 320; // 그룹 내 포스트잇들의 가로 간격
+            
+            // 1~14 그룹 아이템 카운팅 객체 초기화
+            let groupCounts = {};
+            for(let i = 1; i <= 14; i++) groupCounts[i] = 0;
+
+            postItElements.forEach(el => {
+                const dataId = el.dataset.id;
+                const data = postItsData.find(d => d.id === dataId);
+                const origGroupNum = data ? data.originalGroup : 1;
+                
+                const row = origGroupNum - 1; // 0 ~ 13
+                const col = groupCounts[origGroupNum];
+                
+                const x = paddingX + 320 + (col * colSpacing); 
+                const y = 90 + (row * rowSpacing); 
+                
+                const rotation = (Math.random() - 0.5) * 4; 
+                
+                el.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+                
+                el.dataset.x = x;
+                el.dataset.y = y;
+                el.dataset.rotation = rotation;
+
+                groupCounts[origGroupNum]++;
+            });
+            savePositions();
+        }
+
         // 보드 곳곳에 흩뿌리기
         function arrangeRandom() {
             saveStateToHistory(getCurrentState()); // 흩뿌리기 직전 상태 저장
 
-            isGroupSortActive = false; // 흩뿌리기 시 타이틀 숨김
+            groupSortDirection = null; // 흩뿌리기 시 타이틀 숨김
             updateHeaderVisibility();
 
             const maxX = 4500; // 5000px 캔버스 기준
